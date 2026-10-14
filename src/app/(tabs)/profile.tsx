@@ -1,10 +1,12 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Ban, BadgeCheck, ChartColumn, Crown, Gift, Hourglass, LogOut, Plus, Star, Users, XCircle } from 'lucide-react-native';
+import { Ban, BadgeCheck, RotateCcw, ChartColumn, Crown, Gift, Hourglass, LogOut, Plus, Star, Users, XCircle } from 'lucide-react-native';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { interestById } from '@/api/interests';
+import { isMockApi, resetMockDb } from '@/api/client';
 import { useMyCommunities, useMyOrganizations, useMySubscription, useProfile } from '@/api/queries';
 import { useAuth, useMe } from '@/auth/auth-context';
 import { AvatarPicker } from '@/components/avatar-picker';
@@ -12,6 +14,7 @@ import { CityPicker } from '@/components/city-picker';
 import { INTEREST_ICONS } from '@/components/icons';
 import { SettingsRow } from '@/components/settings-row';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetOption } from '@/components/ui/sheet';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
@@ -35,6 +38,7 @@ export default function ProfileScreen() {
   const sub = useMySubscription();
   const passLive = sub.data && sub.data.status !== 'expired';
   const profile = useProfile();
+  const [resetOpen, setResetOpen] = useState(false);
   const open = (url: string) => WebBrowser.openBrowserAsync(url);
   const group = [styles.group, { backgroundColor: colors.surface, borderColor: colors.line }];
 
@@ -143,6 +147,23 @@ export default function ProfileScreen() {
       </View>
 
       <Button title={t.profile.signOut} icon={LogOut} variant="ghost" onPress={signOut} />
+      {isMockApi ? (
+        <Button title={t.common.demoReset} icon={RotateCcw} variant="ghost" style={{ marginTop: spacing.md }} onPress={() => setResetOpen(true)} />
+      ) : null}
+      <Sheet visible={resetOpen} onClose={() => setResetOpen(false)} title={t.common.demoReset}>
+        <Text color="textMuted" style={{ marginBottom: spacing.sm }}>
+          {t.common.demoResetHint}
+        </Text>
+        <SheetOption
+          icon={RotateCcw}
+          label={t.common.demoReset}
+          onPress={async () => {
+            setResetOpen(false);
+            await resetMockDb();
+            await signOut();
+          }}
+        />
+      </Sheet>
       <Text variant="caption" color="textFaint" style={styles.version}>
         {t.profile.version} {Constants.expoConfig?.version ?? '—'}
       </Text>

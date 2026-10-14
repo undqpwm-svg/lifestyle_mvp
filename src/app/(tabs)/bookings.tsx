@@ -50,7 +50,7 @@ export default function BookingsScreen() {
         <LoadingView />
       ) : list.length === 0 ? (
         <EmptyView
-          title={t.bookings.empty}
+          title={tab === 'past' ? t.bookings.emptyPast : t.bookings.empty}
           hint={tab === 'upcoming' ? t.bookings.emptyHint : undefined}
           action={tab === 'upcoming' ? <Button title={t.bookings.toFeed} onPress={() => router.navigate('/')} /> : undefined}
         />

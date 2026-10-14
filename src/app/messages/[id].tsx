@@ -43,7 +43,7 @@ export default function DirectChatScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ChatHeader
-        fallback={() => router.replace('/messages')}
+        fallback={() => router.navigate('/(tabs)/messages')}
         onPress={openProfile}
         title={peer?.name ?? ''}
         subtitle={c?.peerTyping ? t.messages.typing : undefined}
@@ -51,7 +51,11 @@ export default function DirectChatScreen() {
       />
       {conv.isPending ? (
         <LoadingView />
-      ) : c && !c.canMessage ? (
+      ) : !c ? (
+        <View style={styles.blockedWrap}>
+          <EmptyView title={t.messages.notFound} action={<Button title={t.messages.title} variant="ghost" onPress={() => router.navigate('/(tabs)/messages')} />} />
+        </View>
+      ) : !c.canMessage ? (
         <View style={styles.blockedWrap}>
           <EmptyView
             title={t.messages.blocked}

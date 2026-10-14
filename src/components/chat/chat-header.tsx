@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAppSettings } from '@/state/app-settings';
 import { spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
@@ -13,9 +14,15 @@ import { Text } from '../ui/text';
 /** Шапка чата как в мессенджерах: назад, аватар, имя и подпись; тап по заголовку — профиль/сообщество. */
 export function ChatHeader({ avatar, title, subtitle, onPress, fallback }: { avatar: ReactNode; title: string; subtitle?: string; onPress?: () => void; fallback: () => void }) {
   const { colors } = useTheme();
+  const { t } = useAppSettings();
   return (
     <SafeAreaView edges={['top']} style={[styles.header, { borderBottomColor: colors.line, backgroundColor: colors.background }]}>
-      <Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : fallback())} hitSlop={10} style={styles.back}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t.common.back}
+        onPress={() => (router.canGoBack() ? router.back() : fallback())}
+        hitSlop={10}
+        style={styles.back}>
         <Icon icon={ArrowLeft} size={22} />
       </Pressable>
       <Pressable style={styles.info} onPress={onPress} disabled={!onPress}>

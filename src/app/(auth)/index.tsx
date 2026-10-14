@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { isMockApi } from '@/api/client';
 import { Cover } from '@/components/ui/cover';
 import { Icon, type LucideIcon } from '@/components/ui/icon';
 import { Segmented } from '@/components/ui/segmented';
@@ -36,6 +37,11 @@ export default function WelcomeScreen() {
         <View style={styles.inner}>
           <Text style={styles.headline}>{t.events.greeting}</Text>
           <Text style={styles.tagline}>{t.auth.tagline}</Text>
+          {isMockApi ? (
+            <View style={styles.demo}>
+              <Text style={styles.demoText}>{t.common.demoBadge}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.actions}>
             <WelcomeButton title={t.auth.start} filled onPress={() => router.push('/phone')} />
@@ -83,6 +89,8 @@ const styles = StyleSheet.create({
   headline: { fontFamily: fonts.display, fontSize: 36, lineHeight: 40, letterSpacing: -1.2, color: palette.ink },
   tagline: { fontFamily: fonts.body, fontSize: 16, lineHeight: 23, color: palette.ink, opacity: 0.72 },
   actions: { gap: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.lg },
+  demo: { alignSelf: 'flex-start', backgroundColor: palette.ink, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  demoText: { fontFamily: fonts.bodySemi, fontSize: 13, color: palette.yellow },
   btn: { minHeight: 54, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   btnFilled: { backgroundColor: palette.ink },
   btnOutline: { borderWidth: 1.5, borderColor: palette.ink },

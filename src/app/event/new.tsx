@@ -18,7 +18,7 @@ import { TextField } from '@/components/ui/text-field';
 import { LISTING_FEE_KZT } from '@/config/billing';
 import { intlLocale } from '@/i18n';
 import { errorMessage } from '@/lib/errors';
-import { formatKzt } from '@/lib/format';
+import { fill, formatKzt } from '@/lib/format';
 import { useAppSettings } from '@/state/app-settings';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -242,6 +242,23 @@ export default function NewEventScreen() {
         ) : null}
 
         {create.error ? <Text variant="caption" color="danger">{errorMessage(create.error, t)}</Text> : null}
+        {!valid ? (
+          // Кнопка неактивна — говорим, чего именно не хватает
+          <Text variant="caption" color="textMuted">
+            {fill(t.eventForm.missing, {
+              fields: [
+                !interestId && t.eventForm.category,
+                title.trim().length < 3 && t.eventForm.name,
+                !startsAt && t.eventForm.time,
+                !venueValue.trim() && t.eventForm.venue,
+                intOr(capacity, 0) < 2 && t.eventForm.capacity,
+              ]
+                .filter(Boolean)
+                .join(', ')
+                .toLowerCase(),
+            })}
+          </Text>
+        ) : null}
         <Button title={isOrg ? t.eventForm.publishAndPay : t.eventForm.publish} disabled={!valid} loading={create.isPending} onPress={submit} />
       </View>
 

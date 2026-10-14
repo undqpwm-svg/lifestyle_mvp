@@ -9,3 +9,4 @@ export const api: Api = API_URL ? createHttpApi(API_URL) : mockApi;
 export const isMockApi = !API_URL;
 
 export { ApiError, setAuthToken } from './api';
+export { resetMockDb } from './mock-api';

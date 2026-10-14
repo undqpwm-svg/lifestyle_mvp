@@ -315,6 +315,12 @@ function scheduleWelcome(db: Db, communityId: string, userId: string) {
 
 const SEED_USERS = new Set(['u-aman', 'u-dana', 'u-erlan', 'u-aliya']);
 
+/** Демо: стереть тестовый сервер на устройстве и начать с исходных данных. */
+export async function resetMockDb() {
+  dbPromise = null;
+  await AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+}
+
 export const mockApi: Api = {
   async requestCode(phone) {
     await delay(500);

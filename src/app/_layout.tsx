@@ -9,14 +9,18 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 
 import { ApiError } from '@/api/client';
 import { AuthProvider, useAuth } from '@/auth/auth-context';
+import { HeaderBack } from '@/components/header-back';
+import { installWebFrame } from '@/lib/web-frame';
 import { AppSettingsProvider, useAppSettings } from '@/state/app-settings';
 import { fonts } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
 SplashScreen.preventAutoHideAsync();
+installWebFrame();
 
 function createQueryClient() {
   return new QueryClient({
@@ -90,6 +94,8 @@ function RootNavigator() {
           headerShadowVisible: false,
           headerTitleStyle: { fontFamily: fonts.displayBold },
           headerBackButtonDisplayMode: 'minimal',
+          // В браузере после обновления страницы истории нет — даём кнопку «домой»
+          ...(Platform.OS === 'web' && { headerLeft: ({ canGoBack }) => <HeaderBack canGoBack={!!canGoBack} /> }),
         }}>
         {/* Гость: только вход. Смена guard автоматически уводит на доступную группу. */}
         <Stack.Protected guard={!signedIn}>
