@@ -1,12 +1,14 @@
 import { ChevronRight, CircleCheck, CreditCard, Lock, ShieldCheck, Smartphone, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useProfile } from '@/api/queries';
 import type { PaymentInput, PaymentPurpose } from '@/api/types';
+import { BONUS_MAX_SHARE } from '@/config/billing';
 import { cardBrand, cardDigits, formatCardNumber, formatExpiry, luhnValid, parseExpiry } from '@/lib/card';
 import { errorMessage } from '@/lib/errors';
-import { formatKzt } from '@/lib/format';
+import { fill, formatKzt } from '@/lib/format';
 import { useAppSettings } from '@/state/app-settings';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -38,6 +40,12 @@ export function PaymentSheet({ amountKzt, purpose, pay, onClose, onPaid }: Props
   const [expiry, setExpiry] = useState('');
   const [cvc, setCvc] = useState('');
   const [touched, setTouched] = useState(false);
+  const [useBonus, setUseBonus] = useState(false);
+  const profile = useProfile();
+  // Бонусами можно оплатить не больше половины суммы — так же считает сервер.
+  const bonusAvailable = Math.min(profile.data?.bonusKzt ?? 0, Math.floor(amountKzt * BONUS_MAX_SHARE));
+  const bonus = useBonus ? bonusAvailable : 0;
+  const toPay = amountKzt - bonus;
 
   const exp = parseExpiry(expiry);
   const numberOk = luhnValid(number);
@@ -48,7 +56,7 @@ export function PaymentSheet({ amountKzt, purpose, pay, onClose, onPaid }: Props
     setError(null);
     setStep('processing');
     try {
-      await pay(payment);
+      await pay({ ...payment, useBonus: bonus > 0 });
       setStep('success');
     } catch (e) {
       setError(errorMessage(e, t));
@@ -79,7 +87,12 @@ export function PaymentSheet({ amountKzt, purpose, pay, onClose, onPaid }: Props
               <Text variant="caption" color="textMuted">
                 {t.payment.purpose[purpose]}
               </Text>
-              <Text variant="h2">{formatKzt(amountKzt)}</Text>
+              <Text variant="h2">{formatKzt(toPay)}</Text>
+              {bonus > 0 ? (
+                <Text variant="caption" color="textMuted" style={styles.strike}>
+                  {formatKzt(amountKzt)}
+                </Text>
+              ) : null}
             </View>
             {!busy ? (
               <Pressable accessibilityLabel={t.common.close} hitSlop={10} onPress={step === 'success' ? finish : onClose} style={[styles.close, { backgroundColor: colors.surfaceAlt }]}>
@@ -94,6 +107,18 @@ export function PaymentSheet({ amountKzt, purpose, pay, onClose, onPaid }: Props
                 <Text variant="caption" color="danger">
                   {error}
                 </Text>
+              </View>
+            ) : null}
+
+            {step === 'method' && bonusAvailable > 0 ? (
+              <View style={[styles.bonus, { backgroundColor: colors.accentSoft }]}>
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong">{t.payment.bonus}</Text>
+                  <Text variant="caption" color="textMuted">
+                    {fill(t.payment.bonusHint, { amount: formatKzt(bonusAvailable) })}
+                  </Text>
+                </View>
+                <Switch value={useBonus} onValueChange={setUseBonus} trackColor={{ true: colors.inverse, false: colors.surfaceAlt }} thumbColor={colors.surface} />
               </View>
             ) : null}
 
@@ -152,7 +177,7 @@ export function PaymentSheet({ amountKzt, purpose, pay, onClose, onPaid }: Props
                     />
                   </View>
                 </View>
-                <Button title={`${t.payment.pay} ${formatKzt(amountKzt)}`} onPress={payByCard} />
+                <Button title={`${t.payment.pay} ${formatKzt(toPay)}`} onPress={payByCard} />
                 <Button title={t.payment.back} variant="ghost" onPress={() => setStep('method')} />
                 <SecureNote text={t.payment.secure} />
                 <Text variant="caption" color="textFaint" style={styles.center}>
@@ -249,6 +274,8 @@ const styles = StyleSheet.create({
   close: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   body: { paddingHorizontal: spacing.xl, gap: spacing.md },
   error: { padding: spacing.md, borderRadius: radius.md },
+  bonus: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.md },
+  strike: { textDecorationLine: 'line-through' },
   method: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.md, borderWidth: 1 },
   methodIcon: { width: 44, height: 44, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   secure: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center', paddingTop: spacing.sm },

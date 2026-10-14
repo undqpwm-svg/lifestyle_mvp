@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
-import { Check, Crown } from 'lucide-react-native';
+import { Check, Crown, Megaphone, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { interestById } from '@/api/interests';
 import type { EventItem } from '@/api/types';
-import { formatEventDate, formatKzt } from '@/lib/format';
+import { fill, formatEventDate, formatKzt } from '@/lib/format';
 import { DEFAULT_COVERS, pexels } from '@/lib/media';
+import { useNow } from '@/lib/use-now';
 import { useAppSettings } from '@/state/app-settings';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -26,9 +27,11 @@ export function EventCard({ event }: { event: EventItem }) {
   const { lang, t } = useAppSettings();
   const interest = interestById.get(event.interestId);
   const left = event.capacity - event.bookedCount;
-  const fill = Math.min(event.bookedCount / event.capacity, 1);
+  const ratio = Math.min(event.bookedCount / event.capacity, 1);
   const lowSeats = left > 0 && left <= Math.max(2, Math.ceil(event.capacity * 0.2));
   const status = event.myBooking?.status;
+  const now = useNow();
+  const promoted = !!event.promotedUntil && new Date(event.promotedUntil).getTime() > now;
 
   return (
     <Pressable
@@ -64,6 +67,12 @@ export function EventCard({ event }: { event: EventItem }) {
               <Text variant="label">{t.events.seatsLeft}</Text>
             </View>
           ) : null}
+          {promoted ? (
+            <View style={[styles.pill, styles.pillRow, styles.promo, { backgroundColor: colors.surface }]}>
+              <Icon icon={Megaphone} size={13} />
+              <Text variant="label">{t.events.promoted}</Text>
+            </View>
+          ) : null}
         </View>
       </Cover>
 
@@ -80,6 +89,14 @@ export function EventCard({ event }: { event: EventItem }) {
         <Text color="textMuted" numberOfLines={1}>
           {event.venue}
         </Text>
+        {event.friendsGoing.length > 0 ? (
+          <View style={styles.meta}>
+            <Icon icon={Users} size={14} />
+            <Text variant="caption" numberOfLines={1} style={{ flex: 1 }}>
+              {fill(t.events.friendsGoing, { names: event.friendsGoing.map((f) => f.name).join(', ') })}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.bottom}>
           <HostLabel host={event.host} />
@@ -88,7 +105,7 @@ export function EventCard({ event }: { event: EventItem }) {
           </Text>
         </View>
         <View style={[styles.track, { backgroundColor: colors.surfaceAlt }]}>
-          <View style={[styles.bar, { width: `${fill * 100}%`, backgroundColor: colors.inverse }]} />
+          <View style={[styles.bar, { width: `${ratio * 100}%`, backgroundColor: colors.inverse }]} />
         </View>
       </View>
     </Pressable>
@@ -101,6 +118,7 @@ const styles = StyleSheet.create({
   overlay: { position: 'absolute', top: spacing.md, left: spacing.md, right: spacing.md, flexDirection: 'row', gap: spacing.sm },
   pill: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.pill },
   pillRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  promo: { marginLeft: 'auto' },
   body: { padding: spacing.lg, gap: spacing.sm },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   upper: { textTransform: 'uppercase' },

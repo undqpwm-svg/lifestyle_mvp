@@ -1,11 +1,11 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { BadgeCheck, Crown, Hourglass, LogOut, Plus, Star, XCircle } from 'lucide-react-native';
+import { Ban, BadgeCheck, ChartColumn, Crown, Gift, Hourglass, LogOut, Plus, Star, Users, XCircle } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { interestById } from '@/api/interests';
-import { useMyCommunities, useMyOrganizations, useMySubscription } from '@/api/queries';
+import { useMyCommunities, useMyOrganizations, useMySubscription, useProfile } from '@/api/queries';
 import { useAuth, useMe } from '@/auth/auth-context';
 import { CityPicker } from '@/components/city-picker';
 import { INTEREST_ICONS } from '@/components/icons';
@@ -19,7 +19,7 @@ import { Text } from '@/components/ui/text';
 import { getCity } from '@/config/cities';
 import { LEGAL_LINKS } from '@/config/links';
 import { LANGS } from '@/i18n';
-import { fill, formatDate } from '@/lib/format';
+import { fill, formatDate, formatKzt } from '@/lib/format';
 import { maskPhone } from '@/lib/phone';
 import { useAppSettings } from '@/state/app-settings';
 import { radius, spacing } from '@/theme/tokens';
@@ -34,6 +34,7 @@ export default function ProfileScreen() {
   const communities = useMyCommunities();
   const sub = useMySubscription();
   const passLive = sub.data && sub.data.status !== 'expired';
+  const profile = useProfile();
   const open = (url: string) => WebBrowser.openBrowserAsync(url);
   const group = [styles.group, { backgroundColor: colors.surface, borderColor: colors.line }];
 
@@ -79,6 +80,13 @@ export default function ProfileScreen() {
           label={t.pass.name}
           value={passLive ? fill(t.pass.until, { date: formatDate(sub.data!.endsAt, lang) }) : undefined}
           onPress={() => router.push('/subscription')}
+        />
+        <SettingsRow icon={Users} label={t.profile.friends} onPress={() => router.push('/friends')} />
+        <SettingsRow
+          icon={Gift}
+          label={t.profile.invite}
+          value={profile.data?.bonusKzt ? formatKzt(profile.data.bonusKzt) : undefined}
+          onPress={() => router.push('/invite')}
           last
         />
       </View>
@@ -94,6 +102,14 @@ export default function ProfileScreen() {
             value={orgStatus[o.status].label}
             valueIcon={orgStatus[o.status].icon}
             onPress={() => router.push({ pathname: '/org/[id]', params: { id: o.id } })}
+          />
+        ))}
+        {(orgs.data ?? []).map((o) => (
+          <SettingsRow
+            key={`dash-${o.id}`}
+            icon={ChartColumn}
+            label={`${t.profile.dashboard} · ${o.name}`}
+            onPress={() => router.push({ pathname: '/org/[id]/dashboard', params: { id: o.id } })}
           />
         ))}
         <SettingsRow icon={Plus} label={t.profile.addOrg} onPress={() => router.push('/org/new')} last />
@@ -120,6 +136,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={group}>
+        <SettingsRow icon={Ban} label={t.people.blockedTitle} onPress={() => router.push('/blocked')} />
         <SettingsRow label={t.profile.offer} onPress={() => open(LEGAL_LINKS.offer)} />
         <SettingsRow label={t.profile.terms} onPress={() => open(LEGAL_LINKS.terms)} />
         <SettingsRow label={t.profile.privacy} onPress={() => open(LEGAL_LINKS.privacy)} last />

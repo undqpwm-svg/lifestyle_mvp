@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { api } from '@/api/client';
 import type { InterestId } from '@/api/types';
 import { useAuth } from '@/auth/auth-context';
 import { CityPicker } from '@/components/city-picker';
@@ -20,6 +21,7 @@ export default function OnboardingScreen() {
   const [name, setName] = useState(user?.name ?? '');
   const [cityId, setCityId] = useState<CityId>(user?.cityId ?? feedCity);
   const [interests, setInterests] = useState<InterestId[]>(user?.interests ?? []);
+  const [referral, setReferral] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const valid = name.trim().length >= 2 && interests.length > 0;
@@ -28,6 +30,8 @@ export default function OnboardingScreen() {
     setLoading(true);
     setError(null);
     try {
+      // Промокод друга применяем до завершения онбординга: после смены профиля экран закроется.
+      if (referral.trim()) await api.applyReferral(referral);
       await completeProfile({ name: name.trim(), cityId, interests });
       setCity(cityId); // лента по умолчанию — город из профиля
     } catch (e) {
@@ -64,6 +68,14 @@ export default function OnboardingScreen() {
           </Text>
           <InterestPicker multiple value={interests} onChange={setInterests} />
         </View>
+        <TextField
+          label={t.onboarding.referral}
+          placeholder="AMAN"
+          value={referral}
+          onChangeText={(v) => setReferral(v.toUpperCase())}
+          autoCapitalize="characters"
+          maxLength={12}
+        />
         {error ? (
           <Text variant="caption" color="danger">
             {error}

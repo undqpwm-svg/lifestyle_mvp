@@ -6,7 +6,7 @@ import {
   type TabListProps,
   type TabTriggerSlotProps,
 } from 'expo-router/ui';
-import { CalendarDays, Ticket, User, Users } from 'lucide-react-native';
+import { CalendarDays, MessageCircle, Ticket, User, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useAppSettings } from '@/state/app-settings';
@@ -31,6 +31,9 @@ export default function AppTabs() {
           </TabTrigger>
           <TabTrigger name="communities" href="/communities" asChild>
             <TabButton icon={Users} label={t.tabs.communities} />
+          </TabTrigger>
+          <TabTrigger name="messages" href="/messages" asChild>
+            <TabButton icon={MessageCircle} label={t.tabs.messages} />
           </TabTrigger>
           <TabTrigger name="bookings" href="/bookings" asChild>
             <TabButton icon={Ticket} label={t.tabs.bookings} />

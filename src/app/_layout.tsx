@@ -103,12 +103,24 @@ function RootNavigator() {
         <Stack.Protected guard={signedIn && !auth.needsOnboarding}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="create" options={{ presentation: 'modal', title: t.create.title }} />
-          <Stack.Screen name="event/[id]" options={{ title: t.event.title }} />
+          <Stack.Screen name="event/[id]/index" options={{ title: t.event.title }} />
+          <Stack.Screen name="event/[id]/checkin" options={{ title: t.checkin.title }} />
+          <Stack.Screen name="ticket/[bookingId]" options={{ title: t.ticket.title, presentation: 'modal' }} />
+          <Stack.Screen name="review/[bookingId]" options={{ title: t.review.title, presentation: 'modal' }} />
+          <Stack.Screen name="notifications" options={{ title: t.notifications.title }} />
+          <Stack.Screen name="map" options={{ title: t.map.title }} />
+          <Stack.Screen name="user/[id]" options={{ title: '' }} />
+          <Stack.Screen name="friends" options={{ title: t.people.friends }} />
+          <Stack.Screen name="invite" options={{ title: t.invite.title }} />
+          <Stack.Screen name="blocked" options={{ title: t.people.blockedTitle }} />
+          <Stack.Screen name="messages/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="messages/new" options={{ title: t.messages.newMessage, presentation: 'modal' }} />
           <Stack.Screen name="event/new" options={{ title: t.eventForm.title }} />
           <Stack.Screen name="community/[id]/index" options={{ title: t.community.title }} />
           <Stack.Screen name="community/[id]/chat" options={{ headerShown: false }} />
           <Stack.Screen name="community/new" options={{ title: t.communityForm.title }} />
-          <Stack.Screen name="org/[id]" options={{ title: t.org.title }} />
+          <Stack.Screen name="org/[id]/index" options={{ title: t.org.title }} />
+          <Stack.Screen name="org/[id]/dashboard" options={{ title: t.dashboard.title }} />
           <Stack.Screen name="org/new" options={{ title: t.orgForm.title }} />
           <Stack.Screen name="subscription" options={{ title: t.pass.name }} />
         </Stack.Protected>

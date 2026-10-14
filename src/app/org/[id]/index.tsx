@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { BadgeCheck, Hourglass, MapPin, Plus } from 'lucide-react-native';
+import { BadgeCheck, ChartColumn, Hourglass, MapPin, Plus } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { ORG_TYPES } from '@/api/interests';
@@ -8,6 +8,8 @@ import { useMe } from '@/auth/auth-context';
 import { EventCard } from '@/components/event-card';
 import { ORG_TYPE_ICONS } from '@/components/icons';
 import { ReportButton } from '@/components/report-button';
+import { ReviewList } from '@/components/review-list';
+import { RatingBadge } from '@/components/stars';
 import { Button } from '@/components/ui/button';
 import { Cover } from '@/components/ui/cover';
 import { Icon } from '@/components/ui/icon';
@@ -50,6 +52,7 @@ export default function OrganizationScreen() {
             </>
           ) : null}
         </View>
+        {org.rating ? <RatingBadge avg={org.rating.avg} count={org.rating.count} /> : null}
         <View style={styles.meta}>
           <Icon icon={MapPin} size={14} color="textMuted" />
           <Text variant="caption" color="textMuted">{org.address}</Text>
@@ -65,6 +68,16 @@ export default function OrganizationScreen() {
           </View>
           {org.status === 'pending' ? <Text variant="caption" color="textMuted">{t.org.pendingHint}</Text> : null}
         </View>
+      ) : null}
+
+      {isOwner ? (
+        <Button
+          title={t.dashboard.title}
+          icon={ChartColumn}
+          variant="dark"
+          style={{ marginBottom: spacing.md }}
+          onPress={() => router.push({ pathname: '/org/[id]/dashboard', params: { id: org.id } })}
+        />
       ) : null}
 
       {isOwner && org.status !== 'rejected' ? (
@@ -85,6 +98,8 @@ export default function OrganizationScreen() {
           events.data.map((e) => <EventCard key={e.id} event={e} />)
         )}
       </Section>
+
+      <ReviewList hostType="organization" hostId={org.id} />
 
       {!isOwner ? (
         <View style={styles.footer}>

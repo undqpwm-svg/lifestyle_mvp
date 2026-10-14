@@ -6,6 +6,8 @@ import { StyleSheet, View } from 'react-native';
 import { interestById } from '@/api/interests';
 import { useCommunity, useCreatePost, useEvents, useJoinCommunity, usePosts } from '@/api/queries';
 import { communityCover } from '@/components/community-card';
+import { ReviewList } from '@/components/review-list';
+import { RatingBadge } from '@/components/stars';
 import { EventCard } from '@/components/event-card';
 import { INTEREST_ICONS } from '@/components/icons';
 import { PostItem } from '@/components/post-item';
@@ -66,6 +68,7 @@ export default function CommunityScreen() {
             </View>
           ))}
         </View>
+        {c.rating ? <RatingBadge avg={c.rating.avg} count={c.rating.count} /> : null}
         <Text color="textMuted">{c.description}</Text>
       </View>
 
@@ -93,6 +96,9 @@ export default function CommunityScreen() {
       <View style={styles.tabBody}>
         {tab === 'events' ? <CommunityEvents id={c.id} cityId={c.cityId} /> : <CommunityFeed id={c.id} canPost={canManage} />}
       </View>
+
+      <View style={{ height: spacing.xl }} />
+      <ReviewList hostType="community" hostId={c.id} limit={3} />
 
       {c.myRole !== 'owner' ? (
         <View style={styles.footer}>

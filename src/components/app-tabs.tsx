@@ -22,6 +22,10 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>{t.tabs.communities}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'person.3', selected: 'person.3.fill' }} md="groups" />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="messages">
+        <NativeTabs.Trigger.Label>{t.tabs.messages}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'bubble.left.and.bubble.right', selected: 'bubble.left.and.bubble.right.fill' }} md="chat" />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="bookings">
         <NativeTabs.Trigger.Label>{t.tabs.bookings}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'ticket', selected: 'ticket.fill' }} md="confirmation_number" />

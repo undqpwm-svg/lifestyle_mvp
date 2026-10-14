@@ -2,7 +2,21 @@ import type { CityId } from '@/config/cities';
 
 import { pexels } from '@/lib/media';
 
-import type { Booking, ChatMessage, CommunityRole, InterestId, Organization, Payment, Post, Subscription, User } from './types';
+import type {
+  AppNotification,
+  Booking,
+  ChatMessage,
+  CommunityRole,
+  DirectMessage,
+  GeoPoint,
+  InterestId,
+  Organization,
+  Payment,
+  Post,
+  Review,
+  Subscription,
+  User,
+} from './types';
 
 // Начальные данные тестового сервера. Даты считаются от текущего момента.
 
@@ -16,6 +30,8 @@ export type DbEvent = {
   host: { type: 'organization' | 'community'; id: string };
   venue: string;
   address: string;
+  location: GeoPoint;
+  promotedUntil?: string;
   startsAt: string;
   durationMin: number;
   priceKzt: number;
@@ -41,10 +57,13 @@ export type DbCommunity = {
 
 export type DbMember = { communityId: string; userId: string; role: CommunityRole };
 
+export type DbUser = User & { referredBy?: string };
+export type DbOrganization = Omit<Organization, 'rating'>;
+
 export type Db = {
   version: 1;
-  users: User[];
-  organizations: Organization[];
+  users: DbUser[];
+  organizations: DbOrganization[];
   communities: DbCommunity[];
   members: DbMember[];
   events: DbEvent[];
@@ -54,6 +73,18 @@ export type Db = {
   payments: (Payment & { userId: string })[];
   subscriptions: (Subscription & { userId: string })[];
   reports: { target: string; targetId: string; reason: string; userId: string; createdAt: string }[];
+  waitlist: { eventId: string; userId: string; createdAt: string }[];
+  reviews: Review[];
+  /** Заявка from → to; accepted — дружба взаимная */
+  friendships: { from: string; to: string; status: 'pending' | 'accepted' }[];
+  notifications: (AppNotification & { userId: string })[];
+  pushTokens: { userId: string; token: string }[];
+  /** Уже созданные «отложенные» уведомления (напоминания, просьбы об отзыве), чтобы не дублировать */
+  notified: string[];
+  conversations: { id: string; members: [string, string]; createdAt: string; lastRead: Record<string, string> }[];
+  directMessages: DirectMessage[];
+  /** by заблокировал target */
+  blocks: { by: string; target: string; createdAt: string }[];
 };
 
 function at(dayOffset: number, hour: number, minute = 0): string {
@@ -64,33 +95,40 @@ function at(dayOffset: number, hour: number, minute = 0): string {
 }
 
 const ago = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
+const inHours = (hours: number) => new Date(Date.now() + hours * 3_600_000).toISOString();
+
+/** Код билета: 6 символов без похожих букв/цифр (0/O, 1/I) */
+export function ticketCode(): string {
+  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 6 }, () => abc[Math.floor(Math.random() * abc.length)]).join('');
+}
 
 export function createSeed(): Db {
-  const users: User[] = [
-    { id: 'u-aman', phone: '+77010000001', name: 'Аман Б.', cityId: 'astana', interests: ['volleyball'], createdAt: ago(900) },
-    { id: 'u-dana', phone: '+77010000002', name: 'Дана К.', cityId: 'astana', interests: ['running', 'walks'], createdAt: ago(800) },
-    { id: 'u-erlan', phone: '+77010000003', name: 'Ерлан М.', cityId: 'astana', interests: ['boardgames', 'mafia'], createdAt: ago(700) },
-    { id: 'u-aliya', phone: '+77010000004', name: 'Алия Л.', cityId: 'almaty', interests: ['tech'], createdAt: ago(600) },
+  const users: DbUser[] = [
+    { id: 'u-aman', phone: '+77010000001', name: 'Аман Б.', cityId: 'astana', interests: ['volleyball'], referralCode: 'AMAN', bonusKzt: 0, createdAt: ago(900) },
+    { id: 'u-dana', phone: '+77010000002', name: 'Дана К.', cityId: 'astana', interests: ['running', 'walks'], referralCode: 'DANA', bonusKzt: 0, createdAt: ago(800) },
+    { id: 'u-erlan', phone: '+77010000003', name: 'Ерлан М.', cityId: 'astana', interests: ['boardgames', 'mafia'], referralCode: 'ERLAN', bonusKzt: 0, createdAt: ago(700) },
+    { id: 'u-aliya', phone: '+77010000004', name: 'Алия Л.', cityId: 'almaty', interests: ['tech'], referralCode: 'ALIYA', bonusKzt: 0, createdAt: ago(600) },
   ];
 
-  const organizations: Organization[] = [
+  const organizations: DbOrganization[] = [
     {
-      id: 'o-pizza', coverUrl: pexels(1028434), name: 'Pizza Point', type: 'cafe', cityId: 'astana', address: 'Астана, ул. Достык, 5',
+      id: 'o-pizza', location: { lat: 51.1283, lng: 71.4305 }, coverUrl: pexels(1028434), name: 'Pizza Point', type: 'cafe', cityId: 'astana', address: 'Астана, ул. Достык, 5',
       description: 'Неаполитанская пицца на дровах. Проводим мастер-классы для взрослых и детей.',
       bin: '220740027686', status: 'verified', ownerId: 'u-dana', createdAt: ago(500),
     },
     {
-      id: 'o-arena', coverUrl: pexels(2874717), name: 'Qazaq Arena', type: 'sports', cityId: 'astana', address: 'Астана, ул. Туран, 57',
+      id: 'o-arena', location: { lat: 51.1088, lng: 71.4041 }, coverUrl: pexels(2874717), name: 'Qazaq Arena', type: 'sports', cityId: 'astana', address: 'Астана, ул. Туран, 57',
       description: 'Крытые поля для футбола и баскетбола, аренда и любительские игры.',
       bin: '190340011223', status: 'verified', ownerId: 'u-aman', createdAt: ago(480),
     },
     {
-      id: 'o-mafia', coverUrl: pexels(8111364), name: 'Mafia Club Astana', type: 'club', cityId: 'astana', address: 'Астана, пр. Республики, 24',
+      id: 'o-mafia', location: { lat: 51.1652, lng: 71.4256 }, coverUrl: pexels(8111364), name: 'Mafia Club Astana', type: 'club', cityId: 'astana', address: 'Астана, пр. Республики, 24',
       description: 'Спортивная и городская мафия с профессиональными ведущими.',
       bin: '210540098765', status: 'verified', ownerId: 'u-erlan', createdAt: ago(470),
     },
     {
-      id: 'o-padel', coverUrl: pexels(32474981), name: 'Padel Club Almaty', type: 'sports', cityId: 'almaty', address: 'Алматы, ул. Розыбакиева, 247',
+      id: 'o-padel', location: { lat: 43.2081, lng: 76.8941 }, coverUrl: pexels(32474981), name: 'Padel Club Almaty', type: 'sports', cityId: 'almaty', address: 'Алматы, ул. Розыбакиева, 247',
       description: 'Шесть кортов для падела, тренеры, турниры по выходным.',
       bin: '200840055667', status: 'verified', ownerId: 'u-aliya', createdAt: ago(460),
     },
@@ -128,56 +166,100 @@ export function createSeed(): Db {
 
   const events: DbEvent[] = [
     {
-      id: 'e-pizza', coverUrl: pexels(4071399), cityId: 'astana', interestId: 'cooking', host: { type: 'organization', id: 'o-pizza' },
+      id: 'e-pizza', location: { lat: 51.1283, lng: 71.4305 }, coverUrl: pexels(4071399), cityId: 'astana', interestId: 'cooking', host: { type: 'organization', id: 'o-pizza' },
       title: 'Мастер-класс: неаполитанская пицца',
       description: 'Шеф покажет, как замесить тесто и выпечь пиццу в дровяной печи. Готовите сами, свою пиццу забираете с собой.',
       venue: 'Pizza Point', address: 'Астана, ул. Достык, 5', startsAt: at(2, 18), durationMin: 120,
       priceKzt: 8000, capacity: 12, seedBooked: 9, includedInSubscription: false, status: 'published', createdBy: 'u-dana',
     },
     {
-      id: 'e-volley', coverUrl: pexels(6203560), cityId: 'astana', interestId: 'volleyball', host: { type: 'community', id: 'c-volley' },
+      id: 'e-volley', location: { lat: 51.1186, lng: 71.4483 }, coverUrl: pexels(6203560), cityId: 'astana', interestId: 'volleyball', host: { type: 'community', id: 'c-volley' },
       title: 'Волейбол: вечерняя игра',
       description: 'Смешанные команды, уровень — любитель. Мячи есть, нужна только форма.',
       venue: 'Дворец спорта', address: 'Астана, пр. Кабанбай батыра, 45', startsAt: at(0, 19), durationMin: 120,
       priceKzt: 0, capacity: 12, seedBooked: 8, includedInSubscription: false, status: 'published', createdBy: 'u-aman',
     },
     {
-      id: 'e-football', coverUrl: pexels(3316945), cityId: 'astana', interestId: 'football', host: { type: 'organization', id: 'o-arena' },
+      id: 'e-football', location: { lat: 51.1088, lng: 71.4041 }, coverUrl: pexels(3316945), cityId: 'astana', interestId: 'football', host: { type: 'organization', id: 'o-arena' },
       title: 'Футбол 6×6', description: 'Крытое поле, манишки выдаём. Три тайма по 30 минут.',
       venue: 'Qazaq Arena', address: 'Астана, ул. Туран, 57', startsAt: at(1, 18, 30), durationMin: 90,
       priceKzt: 2500, capacity: 12, seedBooked: 10, includedInSubscription: true, status: 'published', createdBy: 'u-aman',
     },
     {
-      id: 'e-mafia', coverUrl: pexels(8111358), cityId: 'astana', interestId: 'mafia', host: { type: 'organization', id: 'o-mafia' },
+      id: 'e-mafia', promotedUntil: inHours(48), location: { lat: 51.1652, lng: 71.4256 }, coverUrl: pexels(8111358), cityId: 'astana', interestId: 'mafia', host: { type: 'organization', id: 'o-mafia' },
       title: 'Городская мафия: вечер для новичков',
       description: 'Ведущий объяснит правила, сыграем 3–4 партии. Чай и печенье включены.',
       venue: 'Mafia Club Astana', address: 'Астана, пр. Республики, 24', startsAt: at(3, 19, 30), durationMin: 180,
       priceKzt: 3500, capacity: 20, seedBooked: 14, includedInSubscription: true, status: 'published', createdBy: 'u-erlan',
     },
     {
-      id: 'e-board', coverUrl: pexels(8111367), cityId: 'astana', interestId: 'boardgames', host: { type: 'community', id: 'c-boardgames' },
+      id: 'e-board', location: { lat: 51.0985, lng: 71.4202 }, coverUrl: pexels(8111367), cityId: 'astana', interestId: 'boardgames', host: { type: 'community', id: 'c-boardgames' },
       title: 'Пятничные настолки', description: 'Каркассон, Codenames, Root. Объясняем правила новичкам.',
       venue: 'Антикафе «Ход»', address: 'Астана, ул. Сыганак, 10', startsAt: at(4, 19), durationMin: 180,
       priceKzt: 0, capacity: 16, seedBooked: 6, includedInSubscription: false, status: 'published', createdBy: 'u-erlan',
     },
     {
-      id: 'e-run', coverUrl: pexels(2526885), cityId: 'astana', interestId: 'running', host: { type: 'community', id: 'c-run' },
+      id: 'e-run', location: { lat: 51.1524, lng: 71.4472 }, coverUrl: pexels(2526885), cityId: 'astana', interestId: 'running', host: { type: 'community', id: 'c-run' },
       title: 'Утренняя пробежка 7 км', description: 'Сбор у моста «Атырау», темп 6:00/км.',
       venue: 'Набережная Есиля', address: 'Сбор у моста «Атырау»', startsAt: at(1, 7), durationMin: 60,
       priceKzt: 0, capacity: 40, seedBooked: 17, includedInSubscription: false, status: 'published', createdBy: 'u-dana',
     },
     {
-      id: 'e-padel', coverUrl: pexels(33641987), cityId: 'almaty', interestId: 'tennis', host: { type: 'organization', id: 'o-padel' },
+      id: 'e-padel', location: { lat: 43.2081, lng: 76.8941 }, coverUrl: pexels(33641987), cityId: 'almaty', interestId: 'tennis', host: { type: 'organization', id: 'o-padel' },
       title: 'Падел для новичков', description: 'Ракетки выдаём. Тренер покажет базу, потом играем пары.',
       venue: 'Padel Club Almaty', address: 'Алматы, ул. Розыбакиева, 247', startsAt: at(0, 20), durationMin: 90,
       priceKzt: 6000, capacity: 8, seedBooked: 5, includedInSubscription: true, status: 'published', createdBy: 'u-aliya',
     },
     {
-      id: 'e-it', coverUrl: pexels(3194521), cityId: 'almaty', interestId: 'tech', host: { type: 'community', id: 'c-it' },
+      id: 'e-it', location: { lat: 43.2183, lng: 76.9275 }, coverUrl: pexels(3194521), cityId: 'almaty', interestId: 'tech', host: { type: 'community', id: 'c-it' },
       title: 'IT-завтрак: AI в продакшене', description: 'Два доклада по 15 минут и свободный нетворкинг.',
       venue: 'Smart Point', address: 'Алматы, пр. Аль-Фараби, 77/8', startsAt: at(2, 9), durationMin: 120,
       priceKzt: 0, capacity: 50, seedBooked: 31, includedInSubscription: false, status: 'published', createdBy: 'u-aliya',
     },
+  ];
+
+  // Уже идущая встреча (на ней можно проверить отзыв после посещения) и прошедшая — для отзывов.
+  events.push(
+    {
+      id: 'e-openrun', location: { lat: 51.1251, lng: 71.4651 }, coverUrl: pexels(2526885), cityId: 'astana', interestId: 'running',
+      host: { type: 'community', id: 'c-run' }, title: 'Открытая пробежка в Центральном парке',
+      description: 'Лёгкие 5 км вокруг озера, темп свободный. Можно присоединиться в процессе.',
+      venue: 'Центральный парк', address: 'Астана, ул. Тауелсиздик', startsAt: ago(0.5), durationMin: 90,
+      priceKzt: 0, capacity: 50, seedBooked: 14, includedInSubscription: false, status: 'published', createdBy: 'u-dana',
+    },
+    {
+      id: 'e-pizza-past', location: { lat: 51.1283, lng: 71.4305 }, coverUrl: pexels(1028434), cityId: 'astana', interestId: 'cooking',
+      host: { type: 'organization', id: 'o-pizza' }, title: 'Мастер-класс: пицца маргарита',
+      description: 'Прошедший мастер-класс.', venue: 'Pizza Point', address: 'Астана, ул. Достык, 5', startsAt: ago(72), durationMin: 120,
+      priceKzt: 7000, capacity: 12, seedBooked: 12, includedInSubscription: false, status: 'published', createdBy: 'u-dana',
+    },
+  );
+
+  // Записи других участников: нужны для «идут друзья», участников и статистики организатора.
+  const booking = (id: string, eventId: string, userId: string, viaSubscription = false): Booking => ({
+    id, eventId, userId, status: 'confirmed', viaSubscription, seats: 1, code: ticketCode(), createdAt: ago(10),
+  });
+  const bookings: Booking[] = [
+    booking('b-s1', 'e-volley', 'u-dana'),
+    booking('b-s2', 'e-volley', 'u-erlan'),
+    booking('b-s3', 'e-football', 'u-aman', true),
+    booking('b-s4', 'e-board', 'u-aman'),
+    booking('b-s5', 'e-mafia', 'u-erlan'),
+    booking('b-s6', 'e-pizza', 'u-aman'),
+    booking('b-s7', 'e-openrun', 'u-aman'),
+  ];
+
+  const review = (id: string, eventId: string, eventTitle: string, host: Review['host'], userId: string, rating: number, text: string, hoursAgo: number): Review => ({
+    id, eventId, eventTitle, host, userId, userName: users.find((u) => u.id === userId)!.name, rating, text, createdAt: ago(hoursAgo),
+  });
+  const reviews: Review[] = [
+    review('r1', 'e-pizza-past', 'Мастер-класс: пицца маргарита', { type: 'organization', id: 'o-pizza' }, 'u-aman', 5, 'Шеф всё объяснил, пицца получилась как в Неаполе. Приду ещё.', 60),
+    review('r2', 'e-pizza-past', 'Мастер-класс: пицца маргарита', { type: 'organization', id: 'o-pizza' }, 'u-erlan', 5, 'Отличная атмосфера, много практики.', 58),
+    review('r3', 'e-pizza-past', 'Мастер-класс: пицца маргарита', { type: 'organization', id: 'o-pizza' }, 'u-aliya', 4, 'Вкусно, но было тесновато.', 55),
+    review('r4', 'e-football', 'Футбол 6×6', { type: 'organization', id: 'o-arena' }, 'u-erlan', 5, 'Поле отличное, всё организовано.', 200),
+    review('r5', 'e-mafia', 'Городская мафия', { type: 'organization', id: 'o-mafia' }, 'u-dana', 5, 'Ведущий — огонь! Новичкам очень комфортно.', 150),
+    review('r6', 'e-volley', 'Волейбол: вечерняя игра', { type: 'community', id: 'c-volley' }, 'u-erlan', 5, 'Лучшая компания по волейболу в городе.', 100),
+    review('r7', 'e-board', 'Пятничные настолки', { type: 'community', id: 'c-boardgames' }, 'u-aman', 4, 'Много игр, дружелюбные люди.', 90),
   ];
 
   const posts: Post[] = [
@@ -219,5 +301,9 @@ export function createSeed(): Db {
     msg('m13', 'c-it', 'u-aliya', 20, 'Ищем спикеров на следующий завтрак. Тема — мобильная разработка, 15 минут.'),
   ];
 
-  return { version: 1, users, organizations, communities, members, events, bookings: [], posts, messages, payments: [], subscriptions: [], reports: [] };
+  return {
+    version: 1, users, organizations, communities, members, events, bookings, posts, messages,
+    payments: [], subscriptions: [], reports: [], waitlist: [], reviews, friendships: [], notifications: [], pushTokens: [], notified: [],
+    conversations: [], directMessages: [], blocks: [],
+  };
 }

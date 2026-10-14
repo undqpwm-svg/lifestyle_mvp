@@ -7,13 +7,15 @@ import type { CityId } from '@/config/cities';
 import { api } from './client';
 import type {
   Attachment,
-  ChatMessage,
   CommunityInput,
   EventFilter,
   EventInput,
+  HostType,
   ID,
   InterestId,
   LocalMedia,
+  MessageView,
+  NewMessage,
   OrganizationInput,
   PaymentInput,
   ReportReason,
@@ -33,6 +35,20 @@ export const qk = {
   posts: (id: ID) => ['posts', id] as const,
   messages: (id: ID) => ['messages', id] as const,
   subscription: ['subscription'] as const,
+  me: ['me'] as const,
+  recommended: (cityId: CityId) => ['events', 'recommended', cityId] as const,
+  attendees: (id: ID) => ['events', 'attendees', id] as const,
+  booking: (id: ID) => ['bookings', id] as const,
+  participants: (id: ID) => ['participants', id] as const,
+  orgStats: (id: ID) => ['organizations', 'stats', id] as const,
+  reviews: (type: HostType, id: ID) => ['reviews', type, id] as const,
+  user: (id: ID) => ['users', id] as const,
+  friends: ['friends'] as const,
+  notifications: ['notifications'] as const,
+  conversations: ['conversations'] as const,
+  conversation: (id: ID) => ['conversations', id] as const,
+  dms: (id: ID) => ['dms', id] as const,
+  blocked: ['blocked'] as const,
 };
 
 // Чтение
@@ -67,8 +83,8 @@ function useInvalidate() {
 export function useBook() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: ({ eventId, useSubscription }: { eventId: ID; useSubscription?: boolean }) =>
-      api.book(eventId, { useSubscription }),
+    mutationFn: ({ eventId, useSubscription, seats }: { eventId: ID; useSubscription?: boolean; seats?: number }) =>
+      api.book(eventId, { useSubscription, seats }),
     onSuccess: () => invalidate(qk.events(), qk.bookings, qk.subscription),
   });
 }
@@ -77,7 +93,7 @@ export function usePayBooking() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: ({ bookingId, payment }: { bookingId: ID; payment: PaymentInput }) => api.payBooking(bookingId, payment),
-    onSuccess: () => invalidate(qk.events(), qk.bookings),
+    onSuccess: () => invalidate(qk.events(), qk.bookings, qk.me),
   });
 }
 
@@ -85,7 +101,7 @@ export function usePayEventListing() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: ({ eventId, payment }: { eventId: ID; payment: PaymentInput }) => api.payEventListing(eventId, payment),
-    onSuccess: () => invalidate(qk.events()),
+    onSuccess: () => invalidate(qk.events(), qk.me),
   });
 }
 
@@ -95,7 +111,7 @@ export function useSubscribe() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (payment: PaymentInput) => api.subscribe(payment),
-    onSuccess: () => invalidate(qk.subscription),
+    onSuccess: () => invalidate(qk.subscription, qk.me),
   });
 }
 
@@ -174,58 +190,189 @@ export type OutgoingMessage = {
   text: string;
   images: (LocalMedia & { width: number; height: number })[];
   voice?: LocalMedia & { durationMs: number };
+  /** Готовые вложения без загрузки (например, встреча, которой делятся) */
+  extra?: Attachment[];
 };
 
-/** Отправка с оптимистичным показом: сообщение сразу появляется в чате со статусом «отправляется». */
-export function useSendMessage(communityId: ID) {
+/** Загружает фото/голос в хранилище и собирает вложения сообщения. */
+async function uploadAttachments(out: OutgoingMessage): Promise<Attachment[]> {
+  const attachments: Attachment[] = [...(out.extra ?? [])];
+  for (const img of out.images) {
+    const { url } = await api.uploadMedia(img);
+    attachments.push({ kind: 'image', url, width: img.width, height: img.height });
+  }
+  if (out.voice) {
+    const { url } = await api.uploadMedia(out.voice);
+    attachments.push({ kind: 'voice', url, durationMs: out.voice.durationMs });
+  }
+  return attachments;
+}
+
+/**
+ * Отправка с оптимистичным показом (общая для чата сообщества и личных сообщений):
+ * сообщение сразу появляется в списке со статусом «отправляется», после ответа сервера список обновляется.
+ */
+function useOptimisticSend(key: readonly unknown[], send: (m: NewMessage) => Promise<unknown>, alsoInvalidate: readonly (readonly unknown[])[] = []) {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const key = qk.messages(communityId);
-
   return useMutation({
-    mutationFn: async (out: OutgoingMessage) => {
-      const attachments: Attachment[] = [];
-      for (const img of out.images) {
-        const { url } = await api.uploadMedia(img);
-        attachments.push({ kind: 'image', url, width: img.width, height: img.height });
-      }
-      if (out.voice) {
-        const { url } = await api.uploadMedia(out.voice);
-        attachments.push({ kind: 'voice', url, durationMs: out.voice.durationMs });
-      }
-      return api.sendMessage(communityId, { text: out.text, attachments });
-    },
+    mutationFn: async (out: OutgoingMessage) => send({ text: out.text, attachments: await uploadAttachments(out) }),
     onMutate: async (out) => {
       await qc.cancelQueries({ queryKey: key });
-      const temp: ChatMessage = {
+      const temp: MessageView = {
         id: `temp-${Date.now()}`,
-        communityId,
         authorId: user?.id ?? '',
         authorName: user?.name ?? '',
         text: out.text.trim(),
         attachments: [
+          ...(out.extra ?? []),
           ...out.images.map((i) => ({ kind: 'image' as const, url: i.uri, width: i.width, height: i.height })),
           ...(out.voice ? [{ kind: 'voice' as const, url: out.voice.uri, durationMs: out.voice.durationMs }] : []),
         ],
         createdAt: new Date().toISOString(),
         pending: true,
       };
-      qc.setQueryData<ChatMessage[]>(key, (old) => [temp, ...(old ?? [])]);
+      qc.setQueryData<MessageView[]>(key, (old) => [temp, ...(old ?? [])]);
       return { tempId: temp.id };
     },
     onError: (_e, _out, ctx) => {
-      qc.setQueryData<ChatMessage[]>(key, (old) => old?.filter((m) => m.id !== ctx?.tempId));
+      qc.setQueryData<MessageView[]>(key, (old) => old?.filter((m) => m.id !== ctx?.tempId));
     },
+    onSettled: () => Promise.all([key, ...alsoInvalidate].map((k) => qc.invalidateQueries({ queryKey: k }))),
+  });
+}
+
+export const useSendMessage = (communityId: ID) =>
+  useOptimisticSend(qk.messages(communityId), (m) => api.sendMessage(communityId, m));
+
+function useOptimisticDelete(key: readonly unknown[], remove: (id: ID) => Promise<void>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: remove,
+    onMutate: (messageId: ID) => qc.setQueryData<MessageView[]>(key, (old) => old?.filter((m) => m.id !== messageId)),
     onSettled: () => qc.invalidateQueries({ queryKey: key }),
   });
 }
 
-export function useDeleteMessage(communityId: ID) {
-  const qc = useQueryClient();
-  const key = qk.messages(communityId);
+export const useDeleteMessage = (communityId: ID) => useOptimisticDelete(qk.messages(communityId), (id) => api.deleteMessage(id));
+
+// Личные сообщения: опрос раз в 4 с в открытом диалоге, раз в 10 с — список диалогов
+export const useConversations = () =>
+  useQuery({ queryKey: qk.conversations, queryFn: () => api.listConversations(), refetchInterval: 10_000 });
+export const useConversation = (id: ID) => useQuery({ queryKey: qk.conversation(id), queryFn: () => api.getConversation(id) });
+export const useDirectMessages = (id: ID) =>
+  useQuery({ queryKey: qk.dms(id), queryFn: () => api.listDirectMessages(id), refetchInterval: 4000 });
+export const useSendDirectMessage = (conversationId: ID) =>
+  useOptimisticSend(qk.dms(conversationId), (m) => api.sendDirectMessage(conversationId, m), [qk.conversations, qk.friends]);
+export const useDeleteDirectMessage = (conversationId: ID) =>
+  useOptimisticDelete(qk.dms(conversationId), (id) => api.deleteDirectMessage(id));
+
+export function useOpenConversation() {
+  return useMutation({ mutationFn: (userId: ID) => api.openConversation(userId) });
+}
+
+/** Отправить встречу в личку пользователю (кнопка «Поделиться»). */
+export function useShareEvent() {
+  const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: (messageId: ID) => api.deleteMessage(messageId),
-    onMutate: (messageId) => qc.setQueryData<ChatMessage[]>(key, (old) => old?.filter((m) => m.id !== messageId)),
-    onSettled: () => qc.invalidateQueries({ queryKey: key }),
+    mutationFn: async ({ userId, attachment }: { userId: ID; attachment: Attachment }) => {
+      const c = await api.openConversation(userId);
+      return api.sendDirectMessage(c.id, { text: '', attachments: [attachment] });
+    },
+    onSuccess: () => invalidate(qk.conversations, qk.friends),
   });
+}
+
+// Профиль с бонусным балансом (сессия хранит только идентичность)
+export const useProfile = () => useQuery({ queryKey: qk.me, queryFn: () => api.me() });
+
+export function useApplyReferral() {
+  const invalidate = useInvalidate();
+  return useMutation({ mutationFn: (code: string) => api.applyReferral(code), onSuccess: () => invalidate(qk.me) });
+}
+
+export const useRecommended = (cityId: CityId) =>
+  useQuery({ queryKey: qk.recommended(cityId), queryFn: () => api.listRecommended(cityId) });
+
+export const useEventAttendees = (eventId: ID) =>
+  useQuery({ queryKey: qk.attendees(eventId), queryFn: () => api.getEventAttendees(eventId) });
+
+export function usePromoteEvent() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ eventId, payment }: { eventId: ID; payment: PaymentInput }) => api.promoteEvent(eventId, payment),
+    onSuccess: () => invalidate(qk.events(), qk.me),
+  });
+}
+
+export const useBooking = (bookingId: ID) => useQuery({ queryKey: qk.booking(bookingId), queryFn: () => api.getBooking(bookingId) });
+
+export function useWaitlist() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ eventId, join }: { eventId: ID; join: boolean }) => (join ? api.joinWaitlist(eventId) : api.leaveWaitlist(eventId)),
+    onSuccess: () => invalidate(qk.events()),
+  });
+}
+
+export const useParticipants = (eventId: ID) =>
+  useQuery({ queryKey: qk.participants(eventId), queryFn: () => api.listParticipants(eventId) });
+
+export function useCheckIn(eventId: ID) {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (code: string) => api.checkIn(eventId, code),
+    onSuccess: () => invalidate(qk.participants(eventId), ['organizations', 'stats']),
+  });
+}
+
+export const useOrgStats = (orgId: ID) => useQuery({ queryKey: qk.orgStats(orgId), queryFn: () => api.orgStats(orgId) });
+
+export const useReviews = (type: HostType, id: ID) =>
+  useQuery({ queryKey: qk.reviews(type, id), queryFn: () => api.listReviews({ type, id }) });
+
+export function useCreateReview() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ eventId, rating, text }: { eventId: ID; rating: number; text: string }) => api.createReview(eventId, rating, text),
+    onSuccess: () => invalidate(qk.bookings, ['reviews'], ['organizations'], ['communities']),
+  });
+}
+
+export const useUserProfile = (userId: ID) => useQuery({ queryKey: qk.user(userId), queryFn: () => api.getUserProfile(userId) });
+export const useFriends = () => useQuery({ queryKey: qk.friends, queryFn: () => api.listFriends() });
+
+export type PersonAction = 'request' | 'accept' | 'decline' | 'remove' | 'block' | 'unblock';
+
+/** Действия с человеком: заявка в друзья, ответ, удаление из друзей, блокировка. */
+export function useFriendAction() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ userId, action }: { userId: ID; action: PersonAction }) => {
+      switch (action) {
+        case 'request':
+          return api.sendFriendRequest(userId);
+        case 'accept':
+        case 'decline':
+          return api.respondFriendRequest(userId, action === 'accept');
+        case 'remove':
+          return api.removeFriend(userId);
+        case 'block':
+          return api.blockUser(userId);
+        case 'unblock':
+          return api.unblockUser(userId);
+      }
+    },
+    onSuccess: (_d, v) => invalidate(qk.user(v.userId), qk.friends, qk.events(), qk.blocked, ['conversations'], ['messages'], ['dms']),
+  });
+}
+
+export const useBlocked = () => useQuery({ queryKey: qk.blocked, queryFn: () => api.listBlocked() });
+
+export const useNotifications = () =>
+  useQuery({ queryKey: qk.notifications, queryFn: () => api.listNotifications(), refetchInterval: 15_000 });
+
+export function useMarkNotificationsRead() {
+  const invalidate = useInvalidate();
+  return useMutation({ mutationFn: () => api.markNotificationsRead(), onSuccess: () => invalidate(qk.notifications) });
 }

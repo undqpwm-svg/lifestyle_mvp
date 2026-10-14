@@ -1,19 +1,21 @@
 import { router } from 'expo-router';
-import { ChevronRight, Crown, Plus } from 'lucide-react-native';
+import { Bell, ChevronRight, Crown, Map as MapIcon, Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { INTERESTS } from '@/api/interests';
-import { useEvents, useMySubscription } from '@/api/queries';
+import { useEvents, useMySubscription, useNotifications, useRecommended } from '@/api/queries';
 import type { InterestId } from '@/api/types';
 import { useMe } from '@/auth/auth-context';
 import { CityPicker } from '@/components/city-picker';
 import { INTEREST_ICONS } from '@/components/icons';
 import { EventCard } from '@/components/event-card';
+import { EventMiniCard } from '@/components/event-mini-card';
 import { Chip } from '@/components/ui/chip';
 import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { Screen } from '@/components/ui/screen';
+import { Section } from '@/components/ui/section';
 import { EmptyView, ErrorView, LoadingView } from '@/components/ui/state-view';
 import { Text } from '@/components/ui/text';
 import { PASS_PLAN } from '@/config/billing';
@@ -29,6 +31,9 @@ export default function EventsScreen() {
   const [interest, setInterest] = useState<InterestId | 'all'>('all');
   const events = useEvents({ cityId });
   const sub = useMySubscription();
+  const recommended = useRecommended(cityId);
+  const notifications = useNotifications();
+  const unread = (notifications.data ?? []).filter((n) => !n.readAt).length;
   const showPassBanner = sub.isSuccess && (!sub.data || sub.data.status === 'expired');
 
   // Чипы: только категории, по которым есть встречи; интересы пользователя — первыми.
@@ -49,7 +54,20 @@ export default function EventsScreen() {
       <View style={styles.header}>
         <View style={styles.row}>
           <CityPicker />
-          <IconButton icon={Plus} label={t.create.title} onPress={() => router.push('/create')} />
+          <View style={styles.actions}>
+            <RoundAction icon={MapIcon} label={t.events.map} onPress={() => router.push('/map')} />
+            <View>
+              <RoundAction icon={Bell} label={t.notifications.title} onPress={() => router.push('/notifications')} />
+              {unread > 0 ? (
+                <View style={[styles.badge, { backgroundColor: colors.danger }]}>
+                  <Text variant="label" style={styles.badgeText}>
+                    {unread > 9 ? '9+' : unread}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+            <IconButton icon={Plus} label={t.create.title} onPress={() => router.push('/create')} />
+          </View>
         </View>
         <Text variant="h1">{t.events.greeting}</Text>
         {showPassBanner ? (
@@ -62,6 +80,16 @@ export default function EventsScreen() {
           </Pressable>
         ) : null}
       </View>
+
+      {(recommended.data?.length ?? 0) > 0 ? (
+        <Section title={t.events.forYou}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.carousel}>
+            {recommended.data!.map((e) => (
+              <EventMiniCard key={e.id} event={e} />
+            ))}
+          </ScrollView>
+        </Section>
+      ) : null}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chips}>
         <Chip label={t.events.all} active={interest === 'all'} onPress={() => setInterest('all')} />
@@ -90,9 +118,28 @@ export default function EventsScreen() {
 const styles = StyleSheet.create({
   header: { gap: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xl },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  actions: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
+  round: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#FFFFFF', fontSize: 10, lineHeight: 12 },
+  carousel: { gap: spacing.md, paddingHorizontal: spacing.lg },
   banner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: palette.yellow },
   bannerText: { flex: 1, color: palette.ink },
   chipsScroll: { marginHorizontal: -spacing.lg, flexGrow: 0 },
   chips: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   list: { gap: spacing.md },
 });
+
+function RoundAction({ icon, label, onPress }: { icon: typeof Bell; label: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => [styles.round, { backgroundColor: colors.surface, borderColor: colors.line, opacity: pressed ? 0.8 : 1 }]}>
+      <Icon icon={icon} size={19} />
+    </Pressable>
+  );
+}

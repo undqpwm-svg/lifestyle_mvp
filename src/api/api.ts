@@ -1,8 +1,12 @@
 import type {
+  AppNotification,
   AuthResult,
   Booking,
   BookingWithEvent,
   ChatMessage,
+  Conversation,
+  DirectMessage,
+  Friend,
   Community,
   CommunityInput,
   EventFilter,
@@ -14,7 +18,12 @@ import type {
   NewMessage,
   Organization,
   OrganizationInput,
+  OrgStats,
+  Participant,
   PaymentInput,
+  PublicProfile,
+  PersonRef,
+  Review,
   Post,
   ProfileInput,
   ReportReason,
@@ -31,10 +40,19 @@ export interface Api {
   verifyCode(phone: string, code: string): Promise<AuthResult>;
   me(): Promise<User>;
   updateProfile(input: ProfileInput): Promise<User>;
+  /** Промокод друга: оба получают бонусы. Один раз на аккаунт. */
+  applyReferral(code: string): Promise<User>;
+  /** Expo push-токен устройства для серверных уведомлений */
+  registerPushToken(token: string): Promise<void>;
 
   // Встречи
   listEvents(filter: EventFilter): Promise<EventItem[]>;
   getEvent(id: ID): Promise<EventItem | null>;
+  /** Подборка «Для вас»: интересы, друзья, сообщества, продвижение */
+  listRecommended(cityId: CityId): Promise<EventItem[]>;
+  getEventAttendees(eventId: ID): Promise<PersonRef[]>;
+  /** Оплатить продвижение встречи (закреп в ленте) */
+  promoteEvent(eventId: ID, payment: PaymentInput): Promise<EventItem>;
   /** Встреча организации создаётся в статусе awaiting_payment, сообщества — сразу published. */
   createEvent(input: EventInput): Promise<EventItem>;
   /** Оплата размещения встречи организацией → published. */
@@ -43,7 +61,48 @@ export interface Api {
 
   // Записи
   myBookings(): Promise<BookingWithEvent[]>;
-  book(eventId: ID, options?: { useSubscription?: boolean }): Promise<Booking>;
+  book(eventId: ID, options?: { useSubscription?: boolean; seats?: number }): Promise<Booking>;
+  getBooking(bookingId: ID): Promise<BookingWithEvent | null>;
+  joinWaitlist(eventId: ID): Promise<void>;
+  leaveWaitlist(eventId: ID): Promise<void>;
+
+  // Чек-ин и кабинет организатора
+  listParticipants(eventId: ID): Promise<Participant[]>;
+  /** Код из QR-билета или 6 символов вручную */
+  checkIn(eventId: ID, code: string): Promise<Participant & { alreadyCheckedIn: boolean }>;
+  orgStats(orgId: ID): Promise<OrgStats>;
+
+  // Отзывы
+  listReviews(host: { type: 'organization' | 'community'; id: ID }): Promise<Review[]>;
+  createReview(eventId: ID, rating: number, text: string): Promise<Review>;
+
+  // Друзья
+  getUserProfile(userId: ID): Promise<PublicProfile | null>;
+  /** Важные (топ-5 по переписке) идут первыми */
+  listFriends(): Promise<Friend[]>;
+  sendFriendRequest(userId: ID): Promise<void>;
+  respondFriendRequest(userId: ID, accept: boolean): Promise<void>;
+  removeFriend(userId: ID): Promise<void>;
+
+  // Чёрный список: заблокированный не пишет в личку, не шлёт заявки, не видит профиль;
+  // его сообщения в чатах сообществ скрыты у заблокировавшего.
+  blockUser(userId: ID): Promise<void>;
+  unblockUser(userId: ID): Promise<void>;
+  listBlocked(): Promise<PersonRef[]>;
+
+  // Личные сообщения
+  listConversations(): Promise<Conversation[]>;
+  /** Найти или создать диалог с пользователем */
+  openConversation(userId: ID): Promise<Conversation>;
+  getConversation(conversationId: ID): Promise<Conversation | null>;
+  listDirectMessages(conversationId: ID): Promise<DirectMessage[]>;
+  sendDirectMessage(conversationId: ID, message: NewMessage): Promise<DirectMessage>;
+  deleteDirectMessage(messageId: ID): Promise<void>;
+  markConversationRead(conversationId: ID): Promise<void>;
+
+  // Уведомления
+  listNotifications(): Promise<AppNotification[]>;
+  markNotificationsRead(): Promise<void>;
   /** Оплата брони. На бэкенде — платёж Kaspi/эквайринга и подтверждение по вебхуку. */
   payBooking(bookingId: ID, payment: PaymentInput): Promise<Booking>;
 
@@ -89,6 +148,8 @@ export type ApiErrorCode =
   | 'event_full'
   | 'payment_declined'
   | 'subscription_required'
+  | 'already_reviewed'
+  | 'invalid_referral'
   | 'validation'
   | 'network'
   | 'server';

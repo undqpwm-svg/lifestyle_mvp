@@ -1,10 +1,11 @@
 import { Image } from 'expo-image';
-import { Clock, ImageOff } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { CalendarDays, Clock, ImageOff } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { ChatMessage, ImageAttachment } from '@/api/types';
-import { formatTime } from '@/lib/format';
+import type { EventAttachment, ImageAttachment, MessageView } from '@/api/types';
+import { formatEventDate, formatTime } from '@/lib/format';
 import { useAppSettings } from '@/state/app-settings';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -16,19 +17,21 @@ import { VoicePlayer } from './voice-player';
 const MAX_W = 260;
 
 type Props = {
-  message: ChatMessage;
+  message: MessageView;
   mine: boolean;
   /** Показывать имя автора (первое сообщение в серии от одного человека) */
   showAuthor: boolean;
   onOpenImage: (url: string) => void;
   onLongPress: () => void;
+  onAuthorPress?: (userId: string) => void;
 };
 
-export function MessageBubble({ message, mine, showAuthor, onOpenImage, onLongPress }: Props) {
+export function MessageBubble({ message, mine, showAuthor, onOpenImage, onLongPress, onAuthorPress }: Props) {
   const { colors } = useTheme();
   const { lang } = useAppSettings();
   const images = message.attachments.filter((a): a is ImageAttachment => a.kind === 'image');
   const voice = message.attachments.find((a) => a.kind === 'voice');
+  const sharedEvent = message.attachments.find((a): a is EventAttachment => a.kind === 'event');
   const fg = mine ? 'onAccent' : 'text';
   const onlyImages = images.length > 0 && !message.text && !voice;
 
@@ -44,12 +47,16 @@ export function MessageBubble({ message, mine, showAuthor, onOpenImage, onLongPr
           message.pending && { opacity: 0.7 },
         ]}>
         {showAuthor && !mine ? (
-          <Text variant="label" style={[styles.author, onlyImages && styles.authorPadded]}>
+          <Text
+            variant="label"
+            style={[styles.author, onlyImages && styles.authorPadded]}
+            onPress={onAuthorPress ? () => onAuthorPress(message.authorId) : undefined}>
             {message.authorName}
           </Text>
         ) : null}
 
         {images.length > 0 ? <ImageGrid images={images} onOpen={onOpenImage} /> : null}
+        {sharedEvent ? <EventShare event={sharedEvent} mine={mine} /> : null}
         {voice ? <VoicePlayer id={message.id} url={voice.url} durationMs={voice.durationMs} tone={mine ? 'mine' : 'theirs'} /> : null}
         {message.text ? (
           <Text color={fg} style={styles.text}>
@@ -65,6 +72,29 @@ export function MessageBubble({ message, mine, showAuthor, onOpenImage, onLongPr
         </View>
       </Pressable>
     </View>
+  );
+}
+
+/** Карточка встречи, которой поделились в личке: тап — открыть встречу. */
+function EventShare({ event, mine }: { event: EventAttachment; mine: boolean }) {
+  const { colors } = useTheme();
+  const { t, lang } = useAppSettings();
+  return (
+    <Pressable
+      onPress={() => router.push({ pathname: '/event/[id]', params: { id: event.eventId } })}
+      style={[styles.event, { backgroundColor: mine ? colors.surface : colors.surfaceAlt }]}>
+      <View style={[styles.eventIcon, { backgroundColor: colors.accent }]}>
+        <Icon icon={CalendarDays} size={20} color="onAccent" />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyStrong" numberOfLines={2}>
+          {event.title}
+        </Text>
+        <Text variant="caption" color="textMuted" numberOfLines={1}>
+          {formatEventDate(event.startsAt, lang, t)} · {event.venue}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -125,4 +155,6 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, width: MAX_W - 8 },
   img: { borderRadius: 14, overflow: 'hidden' },
   imgFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  event: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: 14, width: MAX_W - 8 },
+  eventIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 });

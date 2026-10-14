@@ -55,6 +55,20 @@
           "cameraPermission": "LIFESTYLE использует камеру, чтобы вы могли снять и отправить фото в чат.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "LIFESTYLE использует камеру, чтобы сканировать QR-билеты участников на входе и снимать фото для чатов.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#FFD400"
+        }
       ]
     ],
     "experiments": {
