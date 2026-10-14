@@ -1,11 +1,11 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { BadgeCheck, Hourglass, LogOut, Plus, Star, XCircle } from 'lucide-react-native';
+import { BadgeCheck, Crown, Hourglass, LogOut, Plus, Star, XCircle } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { interestById } from '@/api/interests';
-import { useMyCommunities, useMyOrganizations } from '@/api/queries';
+import { useMyCommunities, useMyOrganizations, useMySubscription } from '@/api/queries';
 import { useAuth, useMe } from '@/auth/auth-context';
 import { CityPicker } from '@/components/city-picker';
 import { INTEREST_ICONS } from '@/components/icons';
@@ -19,6 +19,7 @@ import { Text } from '@/components/ui/text';
 import { getCity } from '@/config/cities';
 import { LEGAL_LINKS } from '@/config/links';
 import { LANGS } from '@/i18n';
+import { fill, formatDate } from '@/lib/format';
 import { maskPhone } from '@/lib/phone';
 import { useAppSettings } from '@/state/app-settings';
 import { radius, spacing } from '@/theme/tokens';
@@ -31,6 +32,8 @@ export default function ProfileScreen() {
   const { t, lang, setLang } = useAppSettings();
   const orgs = useMyOrganizations();
   const communities = useMyCommunities();
+  const sub = useMySubscription();
+  const passLive = sub.data && sub.data.status !== 'expired';
   const open = (url: string) => WebBrowser.openBrowserAsync(url);
   const group = [styles.group, { backgroundColor: colors.surface, borderColor: colors.line }];
 
@@ -68,6 +71,16 @@ export default function ProfileScreen() {
             ) : null;
           })}
         </View>
+      </View>
+
+      <View style={group}>
+        <SettingsRow
+          icon={Crown}
+          label={t.pass.name}
+          value={passLive ? fill(t.pass.until, { date: formatDate(sub.data!.endsAt, lang) }) : undefined}
+          onPress={() => router.push('/subscription')}
+          last
+        />
       </View>
 
       <Text variant="h3" style={styles.groupTitle}>

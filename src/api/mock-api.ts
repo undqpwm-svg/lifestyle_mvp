@@ -1,14 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { LISTING_FEE_KZT, PASS_PLAN } from '@/config/billing';
+import { luhnValid } from '@/lib/card';
+
 import { ApiError, getAuthToken, type Api } from './api';
 import { createSeed, type Db, type DbCommunity, type DbEvent } from './mock-seed';
-import type { Booking, Community, EventItem, Organization, User } from './types';
+import type { Booking, Community, EventItem, Organization, Payment, PaymentInput, PaymentPurpose, Subscription, User } from './types';
 
 // Тестовый «сервер» в памяти устройства. Повторяет бизнес-правила будущего бэкенда,
 // чтобы UI можно было разрабатывать и показывать без сервера.
 // Код подтверждения в моке всегда 1111.
 
-const STORAGE_KEY = 'lifestyle.mockdb.v3';
+const STORAGE_KEY = 'lifestyle.mockdb.v4';
 const MOCK_OTP = '1111';
 const TOKEN_PREFIX = 'mock-token:';
 const RESEED_AFTER_MS = 3 * 86_400_000;
@@ -92,6 +95,45 @@ function toCommunity(db: Db, c: DbCommunity, userId: string | null): Community {
   };
 }
 
+// Платёжный «шлюз» мока. Kaspi — всегда успешно (подтверждение в приложении Kaspi имитирует клиент).
+// Карта: проверка Луна/срока/CVC; тестовая карта 4000 0000 0000 0002 — отказ банка.
+const DECLINED_CARD = '4000000000000002';
+
+async function charge(db: Db, userId: string, purpose: PaymentPurpose, amountKzt: number, input: PaymentInput): Promise<Payment> {
+  await delay(900);
+  if (input.method === 'card') {
+    const { number, expMonth, expYear, cvc } = input.card;
+    const expired = new Date(expYear, expMonth, 0, 23, 59, 59) < new Date();
+    assert(luhnValid(number) && !expired && /^\d{3}$/.test(cvc), 'validation', 'card');
+  }
+  const declined = input.method === 'card' && input.card.number === DECLINED_CARD;
+  const payment: Payment = {
+    id: uid('pay'),
+    purpose,
+    amountKzt,
+    method: input.method,
+    status: declined ? 'failed' : 'succeeded',
+    createdAt: now(),
+  };
+  db.payments.push({ ...payment, userId });
+  await save();
+  if (declined) throw new ApiError('payment_declined');
+  return payment;
+}
+
+function currentSubscription(db: Db, userId: string): Subscription | null {
+  const sub = db.subscriptions
+    .filter((x) => x.userId === userId)
+    .sort((a, b) => b.endsAt.localeCompare(a.endsAt))[0];
+  if (!sub) return null;
+  const expired = new Date(sub.endsAt).getTime() < Date.now();
+  const visitsUsed = db.bookings.filter(
+    (b) => b.userId === userId && b.viaSubscription && b.status !== 'cancelled' && b.createdAt >= sub.startedAt,
+  ).length;
+  const { userId: _omit, ...rest } = sub;
+  return { ...rest, status: expired ? 'expired' : sub.status, visitsUsed };
+}
+
 function roleIn(db: Db, communityId: string, userId: string) {
   return db.members.find((m) => m.communityId === communityId && m.userId === userId)?.role ?? null;
 }
@@ -167,7 +209,7 @@ export const mockApi: Api = {
     return db.events
       .filter(
         (e) =>
-          e.status === 'published' &&
+          (e.status === 'published' || (e.status === 'awaiting_payment' && e.createdBy === me?.id && !!f.hostId)) &&
           e.cityId === f.cityId &&
           new Date(e.startsAt).getTime() > from &&
           (!f.interestId || e.interestId === f.interestId) &&
@@ -193,6 +235,7 @@ export const mockApi: Api = {
     let cityId: DbEvent['cityId'];
 
     // Права: организация — только владелец; сообщество — владелец или модератор.
+    let status: DbEvent['status'] = 'published';
     if (input.host.type === 'organization') {
       const org = db.organizations.find((o) => o.id === input.host.id);
       assert(org && org.ownerId === me.id, 'forbidden');
@@ -200,6 +243,8 @@ export const mockApi: Api = {
       // Принимать оплату может только проверенная организация (есть договор и реквизиты).
       assert(input.priceKzt === 0 || org.status === 'verified', 'forbidden', 'paid_requires_verified');
       cityId = org.cityId;
+      // Организация публикует после оплаты размещения.
+      status = 'awaiting_payment';
     } else {
       const c = db.communities.find((x) => x.id === input.host.id);
       const role = db.members.find((m) => m.communityId === input.host.id && m.userId === me.id)?.role;
@@ -210,6 +255,8 @@ export const mockApi: Api = {
     assert(input.title.trim().length >= 3, 'validation', 'title');
     assert(input.capacity >= 2 && input.capacity <= 1000, 'validation', 'capacity');
     assert(new Date(input.startsAt).getTime() > Date.now(), 'validation', 'startsAt');
+    // В подписку можно включить только платную встречу проверенной организации.
+    const canInclude = input.host.type === 'organization' && input.priceKzt > 0;
 
     const e: DbEvent = {
       ...input,
@@ -217,11 +264,24 @@ export const mockApi: Api = {
       cityId,
       title: input.title.trim(),
       description: input.description.trim(),
+      includedInSubscription: canInclude && input.includedInSubscription,
       seedBooked: 0,
-      status: 'published',
+      status,
       createdBy: me.id,
     };
     db.events.push(e);
+    await save();
+    return toEvent(db, e, me.id);
+  },
+
+  async payEventListing(eventId, payment) {
+    const db = await loadDb();
+    const me = await currentUser(db);
+    const e = db.events.find((x) => x.id === eventId);
+    assert(e && e.createdBy === me.id, 'not_found');
+    assert(e.status === 'awaiting_payment', 'validation', 'already_paid');
+    await charge(db, me.id, 'listing', LISTING_FEE_KZT, payment);
+    e.status = 'published';
     await save();
     return toEvent(db, e, me.id);
   },
@@ -249,7 +309,7 @@ export const mockApi: Api = {
       .sort((a, b) => a.event.startsAt.localeCompare(b.event.startsAt));
   },
 
-  async book(eventId) {
+  async book(eventId, options) {
     await delay(400);
     const db = await loadDb();
     const me = await currentUser(db);
@@ -258,13 +318,20 @@ export const mockApi: Api = {
     const existing = activeBookings(db, eventId).find((b) => b.userId === me.id);
     if (existing) return existing;
     assert(e.seedBooked + activeBookings(db, eventId).length < e.capacity, 'event_full');
-    // Бесплатная встреча — сразу участник; платная — место держится до оплаты
+    let viaSubscription = false;
+    if (options?.useSubscription) {
+      const sub = currentSubscription(db, me.id);
+      assert(e.includedInSubscription && sub && sub.status !== 'expired' && sub.visitsUsed < sub.visitsLimit, 'subscription_required');
+      viaSubscription = true;
+    }
+    // Бесплатно или по подписке — сразу участник; платная — место держится до оплаты
     // (на бэкенде бронь без оплаты снимается по таймауту, например через 15 минут).
     const booking: Booking = {
       id: uid('b'),
       eventId,
       userId: me.id,
-      status: e.priceKzt === 0 ? 'confirmed' : 'pending_payment',
+      status: e.priceKzt === 0 || viaSubscription ? 'confirmed' : 'pending_payment',
+      viaSubscription,
       createdAt: now(),
     };
     db.bookings.push(booking);
@@ -272,12 +339,13 @@ export const mockApi: Api = {
     return booking;
   },
 
-  async payBooking(bookingId) {
-    await delay(800);
+  async payBooking(bookingId, payment) {
     const db = await loadDb();
     const me = await currentUser(db);
     const b = db.bookings.find((x) => x.id === bookingId && x.userId === me.id);
     assert(b && b.status === 'pending_payment', 'not_found');
+    const e = db.events.find((x) => x.id === b.eventId)!;
+    await charge(db, me.id, 'booking', e.priceKzt, payment);
     b.status = 'confirmed';
     await save();
     return { ...b };
@@ -291,6 +359,45 @@ export const mockApi: Api = {
     assert(b, 'not_found');
     b.status = 'cancelled';
     await save();
+  },
+
+  async mySubscription() {
+    await delay();
+    const db = await loadDb();
+    return currentSubscription(db, (await currentUser(db)).id);
+  },
+
+  async subscribe(payment) {
+    const db = await loadDb();
+    const me = await currentUser(db);
+    const current = currentSubscription(db, me.id);
+    assert(!current || current.status === 'expired', 'validation', 'already_subscribed');
+    await charge(db, me.id, 'subscription', PASS_PLAN.priceKzt, payment);
+    const start = new Date();
+    const sub = {
+      id: uid('sub'),
+      userId: me.id,
+      planId: PASS_PLAN.id,
+      status: 'active' as const,
+      startedAt: start.toISOString(),
+      endsAt: new Date(start.getTime() + PASS_PLAN.periodDays * 86_400_000).toISOString(),
+      visitsUsed: 0,
+      visitsLimit: PASS_PLAN.visitsLimit,
+    };
+    db.subscriptions.push(sub);
+    await save();
+    return currentSubscription(db, me.id)!;
+  },
+
+  async cancelSubscription() {
+    await delay();
+    const db = await loadDb();
+    const me = await currentUser(db);
+    const sub = db.subscriptions.filter((x) => x.userId === me.id).sort((a, b) => b.endsAt.localeCompare(a.endsAt))[0];
+    assert(sub, 'not_found');
+    sub.status = 'cancelled';
+    await save();
+    return currentSubscription(db, me.id)!;
   },
 
   async myOrganizations() {

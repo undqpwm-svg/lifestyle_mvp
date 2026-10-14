@@ -1,22 +1,25 @@
 import { router } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { ChevronRight, Crown, Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { INTERESTS } from '@/api/interests';
-import { useEvents } from '@/api/queries';
+import { useEvents, useMySubscription } from '@/api/queries';
 import type { InterestId } from '@/api/types';
 import { useMe } from '@/auth/auth-context';
 import { CityPicker } from '@/components/city-picker';
 import { INTEREST_ICONS } from '@/components/icons';
 import { EventCard } from '@/components/event-card';
 import { Chip } from '@/components/ui/chip';
+import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { Screen } from '@/components/ui/screen';
 import { EmptyView, ErrorView, LoadingView } from '@/components/ui/state-view';
 import { Text } from '@/components/ui/text';
+import { PASS_PLAN } from '@/config/billing';
+import { fill, formatKzt } from '@/lib/format';
 import { useAppSettings } from '@/state/app-settings';
-import { spacing } from '@/theme/tokens';
+import { palette, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
 export default function EventsScreen() {
@@ -25,6 +28,8 @@ export default function EventsScreen() {
   const { cityId, lang, t } = useAppSettings();
   const [interest, setInterest] = useState<InterestId | 'all'>('all');
   const events = useEvents({ cityId });
+  const sub = useMySubscription();
+  const showPassBanner = sub.isSuccess && (!sub.data || sub.data.status === 'expired');
 
   // Чипы: только категории, по которым есть встречи; интересы пользователя — первыми.
   const chips = useMemo(() => {
@@ -47,6 +52,15 @@ export default function EventsScreen() {
           <IconButton icon={Plus} label={t.create.title} onPress={() => router.push('/create')} />
         </View>
         <Text variant="h1">{t.events.greeting}</Text>
+        {showPassBanner ? (
+          <Pressable onPress={() => router.push('/subscription')} style={({ pressed }) => [styles.banner, { opacity: pressed ? 0.9 : 1 }]}>
+            <Icon icon={Crown} size={20} tint={palette.ink} />
+            <Text variant="bodyStrong" style={styles.bannerText}>
+              {fill(t.pass.banner, { price: formatKzt(PASS_PLAN.priceKzt) })}
+            </Text>
+            <Icon icon={ChevronRight} size={18} tint={palette.ink} />
+          </Pressable>
+        ) : null}
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chips}>
@@ -76,6 +90,8 @@ export default function EventsScreen() {
 const styles = StyleSheet.create({
   header: { gap: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xl },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: palette.yellow },
+  bannerText: { flex: 1, color: palette.ink },
   chipsScroll: { marginHorizontal: -spacing.lg, flexGrow: 0 },
   chips: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   list: { gap: spacing.md },

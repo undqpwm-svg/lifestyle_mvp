@@ -112,7 +112,8 @@ export type HostType = 'organization' | 'community';
 /** Кто проводит встречу. Денормализовано для ленты, чтобы не делать N запросов. */
 export type HostRef = { type: HostType; id: ID; name: string; verified: boolean };
 
-export type EventStatus = 'published' | 'cancelled';
+/** awaiting_payment — организация создала встречу, но не оплатила размещение (видна только автору) */
+export type EventStatus = 'awaiting_payment' | 'published' | 'cancelled';
 
 export type EventItem = {
   id: ID;
@@ -131,6 +132,8 @@ export type EventItem = {
   priceKzt: number;
   capacity: number;
   bookedCount: number;
+  /** Подписчики LIFESTYLE Pass ходят бесплатно (только платные встречи проверенных организаций) */
+  includedInSubscription: boolean;
   status: EventStatus;
   createdBy: ID;
   /** Бронь текущего пользователя, если есть */
@@ -148,6 +151,7 @@ export type EventInput = {
   durationMin: number;
   priceKzt: number;
   capacity: number;
+  includedInSubscription: boolean;
 };
 
 export type EventFilter = { cityId: CityId; interestId?: InterestId; hostType?: HostType; hostId?: ID };
@@ -161,10 +165,43 @@ export type Booking = {
   eventId: ID;
   userId: ID;
   status: BookingStatus;
+  /** Запись по подписке — без оплаты, списывает одно посещение */
+  viaSubscription: boolean;
   createdAt: ISODate;
 };
 
 export type BookingWithEvent = Booking & { event: EventItem };
+
+// Платежи
+export type PaymentMethod = 'kaspi' | 'card';
+
+/** Данные карты есть только в демо. В продакшене карту вводят в форме эквайера, сюда приходит токен. */
+export type CardInput = { number: string; expMonth: number; expYear: number; cvc: string };
+
+export type PaymentInput = { method: 'kaspi' } | { method: 'card'; card: CardInput };
+
+export type PaymentPurpose = 'booking' | 'subscription' | 'listing';
+
+export type Payment = {
+  id: ID;
+  purpose: PaymentPurpose;
+  amountKzt: number;
+  method: PaymentMethod;
+  status: 'succeeded' | 'failed';
+  createdAt: ISODate;
+};
+
+// Подписка
+export type Subscription = {
+  id: ID;
+  planId: string;
+  /** active — действует до endsAt; cancelled — автопродление выключено, но период ещё идёт */
+  status: 'active' | 'cancelled' | 'expired';
+  startedAt: ISODate;
+  endsAt: ISODate;
+  visitsUsed: number;
+  visitsLimit: number;
+};
 
 // Модерация
 export type ReportTarget = 'event' | 'community' | 'post' | 'message' | 'organization' | 'user';

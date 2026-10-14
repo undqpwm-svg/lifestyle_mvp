@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Check } from 'lucide-react-native';
+import { Check, Crown } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { interestById } from '@/api/interests';
@@ -50,6 +50,13 @@ export function EventCard({ event }: { event: EventItem }) {
               {status === 'confirmed' ? <Icon icon={Check} size={13} color="onInverse" strokeWidth={3} /> : null}
               <Text variant="label" color="onInverse">
                 {status === 'confirmed' ? t.bookings.confirmed : t.bookings.pendingPayment}
+              </Text>
+            </View>
+          ) : event.includedInSubscription ? (
+            <View style={[styles.pill, styles.pillRow, { backgroundColor: colors.inverse }]}>
+              <Icon icon={Crown} size={13} color="onInverse" />
+              <Text variant="label" color="onInverse">
+                {t.event.passBadge}
               </Text>
             </View>
           ) : lowSeats ? (

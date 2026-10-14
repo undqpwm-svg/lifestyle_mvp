@@ -15,6 +15,7 @@ import type {
   InterestId,
   LocalMedia,
   OrganizationInput,
+  PaymentInput,
   ReportReason,
   ReportTarget,
 } from './types';
@@ -31,6 +32,7 @@ export const qk = {
   community: (id: ID) => ['communities', 'detail', id] as const,
   posts: (id: ID) => ['posts', id] as const,
   messages: (id: ID) => ['messages', id] as const,
+  subscription: ['subscription'] as const,
 };
 
 // Чтение
@@ -65,16 +67,43 @@ function useInvalidate() {
 export function useBook() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: (eventId: ID) => api.book(eventId),
-    onSuccess: () => invalidate(qk.events(), qk.bookings),
+    mutationFn: ({ eventId, useSubscription }: { eventId: ID; useSubscription?: boolean }) =>
+      api.book(eventId, { useSubscription }),
+    onSuccess: () => invalidate(qk.events(), qk.bookings, qk.subscription),
   });
 }
 
 export function usePayBooking() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: (bookingId: ID) => api.payBooking(bookingId),
+    mutationFn: ({ bookingId, payment }: { bookingId: ID; payment: PaymentInput }) => api.payBooking(bookingId, payment),
     onSuccess: () => invalidate(qk.events(), qk.bookings),
+  });
+}
+
+export function usePayEventListing() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ eventId, payment }: { eventId: ID; payment: PaymentInput }) => api.payEventListing(eventId, payment),
+    onSuccess: () => invalidate(qk.events()),
+  });
+}
+
+export const useMySubscription = () => useQuery({ queryKey: qk.subscription, queryFn: () => api.mySubscription() });
+
+export function useSubscribe() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (payment: PaymentInput) => api.subscribe(payment),
+    onSuccess: () => invalidate(qk.subscription),
+  });
+}
+
+export function useCancelSubscription() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: () => api.cancelSubscription(),
+    onSuccess: () => invalidate(qk.subscription),
   });
 }
 
@@ -82,7 +111,7 @@ export function useCancelBooking() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (bookingId: ID) => api.cancelBooking(bookingId),
-    onSuccess: () => invalidate(qk.events(), qk.bookings),
+    onSuccess: () => invalidate(qk.events(), qk.bookings, qk.subscription),
   });
 }
 

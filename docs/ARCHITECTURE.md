@@ -23,7 +23,14 @@
 3. **Платная бронь держит место 15 минут** (`pending_payment`). Без оплаты бронь снимается по таймауту.
    Статус `confirmed` выставляет только бэкенд — по вебхуку Kaspi, не по ответу клиента.
 4. **При отмене встречи** все брони отменяются, по оплаченным броням оформляется возврат.
-5. **Каждый пользовательский контент можно обжаловать** (встреча, сообщество, пост, организация, пользователь).
+5. **Размещение встречи организацией платное** (`LISTING_FEE_KZT`, сейчас 2 000 ₸): встреча создаётся в статусе
+   `awaiting_payment` и попадает в ленту после оплаты. Сообщества размещают бесплатно.
+   Рекомендация: со временем перейти на комиссию с проданных мест (10–15%) — предоплата отпугивает новые площадки.
+6. **Подписка LIFESTYLE Pass** (`PASS_PLAN`: 5 000 ₸ / 30 дней, лимит 8 посещений): бесплатный вход на встречи
+   с флагом `included_in_subscription`. Включить встречу в подписку может только проверенная организация и только платную.
+   Организатору за каждое посещение подписчика платформа выплачивает компенсацию (например, 60% цены билета) —
+   иначе площадкам невыгодно участвовать. Неявка без отмены за 12 часов списывает посещение.
+7. **Каждый пользовательский контент можно обжаловать** (встреча, сообщество, пост, организация, пользователь).
    Это требование App Store (Guideline 1.2) и Google Play для приложений с пользовательским контентом.
    Нужны ещё блокировка пользователя и фильтр контента до публикации в сторы.
 
@@ -41,9 +48,14 @@ events           id, host_type (organization|community), host_id, created_by →
                  title, description, venue, address, starts_at, duration_min, price_kzt, capacity,
                  status (published|cancelled), created_at
 bookings         id, event_id, user_id, status (pending_payment|confirmed|cancelled),
-                 expires_at, created_at                 UNIQUE(event_id, user_id) WHERE status <> 'cancelled'
-payments         id, booking_id, provider (kaspi), provider_payment_id, amount_kzt, status, raw jsonb, created_at
-posts            id, community_id, author_id, text, created_at, deleted_at
+                 via_subscription, expires_at, created_at                 UNIQUE(event_id, user_id) WHERE status <> 'cancelled'
+posts            id, community_id, author_id, text, created_at, deleted_at      -- объявления (владелец/модераторы)
+messages         id, community_id, author_id, text, created_at, deleted_at, deleted_by
+message_media    id, message_id, kind (image|voice), storage_key, width, height, duration_ms, size_bytes
+payments         id, user_id, purpose (booking|subscription|listing), target_id, amount_kzt, method (kaspi|card),
+                 provider_payment_id, status (pending|succeeded|failed|refunded), raw jsonb, created_at
+subscriptions    id, user_id, plan_id, status (active|cancelled|expired), started_at, ends_at, provider_recurring_id
+payouts          id, organization_id, period, amount_kzt, status, items jsonb   -- выплаты за билеты и визиты по подписке
 reports          id, reporter_id, target_type, target_id, reason, status, created_at
 ```
 
@@ -71,8 +83,33 @@ REST, JSON, `Authorization: Bearer <JWT>`. Ошибки: `{ "error": { "code": "
 | GET / POST | /v1/communities, /v1/communities/:id | сообщества |
 | POST / DELETE | /v1/communities/:id/members(/me) | вступить / выйти |
 | GET / POST | /v1/communities/:id/posts | лента сообщества |
+| GET / POST | /v1/communities/:id/messages | чат сообщества |
+| DELETE | /v1/messages/:id | удалить сообщение (автор, модератор) |
+| POST | /v1/media | подписанный URL для загрузки фото/голосового |
+| POST | /v1/events/:id/listing-payment | оплата размещения встречи организацией |
+| GET / POST | /v1/me/subscription | подписка, оформление |
+| POST | /v1/me/subscription/cancel | выключить автопродление |
 | POST | /v1/reports | жалоба |
 | POST | /v1/webhooks/kaspi | вебхук оплаты (серверный) |
+
+## Чат сообществ
+
+- Только для участников сообщества. Текст до 4 000 символов, до 10 вложений: фото (JPEG, сжатие на клиенте) и голосовые (AAC/m4a, на вебе — webm).
+- Медиа грузятся напрямую в объектное хранилище по подписанному URL (`POST /v1/media` → `PUT uploadUrl`), API их не проксирует.
+  Хранилище — S3-совместимое в дата-центре РК. Ограничения: фото до 10 МБ, голосовое до 5 минут.
+- Доставка: WebSocket-шлюз (`/v1/ws`, событие `message.created` в канал сообщества) + push-уведомления (Expo Push → APNs/FCM)
+  для тех, кто не в приложении. Клиент сейчас опрашивает список раз в 4 секунды — это остаётся запасным каналом.
+- Модерация: удаление своих сообщений, модератор/владелец удаляют любые, жалоба на сообщение. Удалённые хранятся 30 дней для разбора жалоб.
+
+## Платежи
+
+- **Kaspi Pay** — основной способ. Сервер создаёт платёж, клиент открывает ссылку/QR Kaspi (`Linking.openURL`),
+  статус приходит вебхуком `/v1/webhooks/kaspi`. Клиент не считает оплату успешной по своему ответу — только по статусу с сервера.
+- **Карты Visa/Mastercard** — через эквайринг банка РК (Halyk ePay, CloudPayments KZ, ioka и т.п.).
+  Номер карты вводится **в форме или SDK эквайера**, к нам приходит только токен — иначе нужна сертификация PCI DSS.
+  Форма карты в приложении сейчас — демо: проверка Луна, срока и CVC, данные никуда не отправляются.
+- **Подписка** — рекуррентный платёж (Kaspi или токен карты), продление за сутки до `ends_at`; при неуспешном списании — 3 попытки и уведомление.
+- Возвраты: отмена встречи организатором → автоматический возврат участникам; отмена участником — по правилам оферты.
 
 ## Авторизация
 

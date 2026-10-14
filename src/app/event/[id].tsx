@@ -1,14 +1,16 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Check, ChevronRight, Info } from 'lucide-react-native';
+import { Check, ChevronRight, Crown, Info } from 'lucide-react-native';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { interestById } from '@/api/interests';
-import { useBook, useCancelBooking, useCancelEvent, useEvent, usePayBooking } from '@/api/queries';
+import { useBook, useCancelBooking, useCancelEvent, useEvent, useMySubscription, usePayBooking, usePayEventListing } from '@/api/queries';
 import { useMe } from '@/auth/auth-context';
 import { eventCover } from '@/components/event-card';
 import { HostLabel } from '@/components/host-label';
 import { INTEREST_ICONS } from '@/components/icons';
+import { PaymentSheet } from '@/components/payment/payment-sheet';
 import { ReportButton } from '@/components/report-button';
 import { Button } from '@/components/ui/button';
 import { Cover } from '@/components/ui/cover';
@@ -16,6 +18,7 @@ import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { EmptyView, ErrorView, LoadingView } from '@/components/ui/state-view';
 import { Text } from '@/components/ui/text';
+import { LISTING_FEE_KZT } from '@/config/billing';
 import { LEGAL_LINKS } from '@/config/links';
 import { errorMessage } from '@/lib/errors';
 import { formatEventDate, formatKzt } from '@/lib/format';
@@ -33,6 +36,11 @@ export default function EventScreen() {
   const pay = usePayBooking();
   const cancelBooking = useCancelBooking();
   const cancelEvent = useCancelEvent();
+  const payListing = usePayEventListing();
+  const sub = useMySubscription();
+  // Открытое окно оплаты: билет (ID брони фиксируем при открытии — после оплаты бронь меняет статус,
+  // а окно должно остаться, чтобы показать «Оплачено») или размещение встречи организацией.
+  const [paying, setPaying] = useState<{ kind: 'booking'; bookingId: string } | { kind: 'listing' } | null>(null);
 
   if (isError) return wrap(<ErrorView onRetry={refetch} />);
   if (isPending) return wrap(<LoadingView />);
@@ -44,7 +52,14 @@ export default function EventScreen() {
   const isPaid = event.priceKzt > 0;
   const isOwner = event.createdBy === me.id;
   const cancelled = event.status === 'cancelled';
-  const mutationError = [book, pay, cancelBooking, cancelEvent].find((m) => m.error)?.error;
+  const unpaid = event.status === 'awaiting_payment';
+  const mutationError = [book, cancelBooking, cancelEvent].find((m) => m.error)?.error;
+  const s = sub.data;
+  const passUsable = !!s && s.status !== 'expired' && s.visitsUsed < s.visitsLimit;
+  const canUsePass = event.includedInSubscription && passUsable;
+
+  // Платная запись: бронь держит место, затем сразу открывается окно оплаты.
+  const bookPaid = () => book.mutate({ eventId: event.id }, { onSuccess: (b) => setPaying({ kind: 'booking', bookingId: b.id }) });
 
   const openHost = () =>
     event.host.type === 'organization'
@@ -98,23 +113,32 @@ export default function EventScreen() {
         ))}
       </View>
 
-      {/* Блок действия зависит от состояния брони */}
-      {cancelled ? (
+      {/* Блок действия зависит от состояния встречи и брони */}
+      {unpaid && isOwner ? (
+        <>
+          <View style={[styles.notice, { backgroundColor: colors.accentSoft }]}>
+            <Text variant="bodyStrong">{t.event.unpaidTitle}</Text>
+            <Text variant="caption" color="textMuted">
+              {t.event.unpaidHint}
+            </Text>
+          </View>
+          <Button title={`${t.event.payListing} · ${formatKzt(LISTING_FEE_KZT)}`} onPress={() => setPaying({ kind: 'listing' })} />
+        </>
+      ) : cancelled ? (
         <View style={[styles.banner, { backgroundColor: colors.surfaceAlt }]}>
           <Text variant="bodyStrong">{t.event.cancelled}</Text>
         </View>
       ) : booking?.status === 'confirmed' ? (
         <>
           <View style={[styles.banner, { backgroundColor: colors.accentSoft }]}>
-            <Icon icon={Check} size={18} strokeWidth={3} />
-            <Text variant="bodyStrong">{t.event.booked}</Text>
+            <Icon icon={booking.viaSubscription ? Crown : Check} size={18} strokeWidth={booking.viaSubscription ? 2 : 3} />
+            <Text variant="bodyStrong">{booking.viaSubscription ? t.event.bookedViaPass : t.event.booked}</Text>
           </View>
           <Button title={t.event.cancelBooking} variant="ghost" loading={cancelBooking.isPending} onPress={() => cancelBooking.mutate(booking.id)} />
         </>
       ) : booking?.status === 'pending_payment' ? (
         <>
-          {/* TODO: реальная оплата — создание платежа Kaspi на бэкенде и подтверждение по вебхуку */}
-          <Button title={`${t.event.pay} · ${formatKzt(event.priceKzt)}`} loading={pay.isPending} onPress={() => pay.mutate(booking.id)} />
+          <Button title={`${t.payment.pay} · ${formatKzt(event.priceKzt)}`} onPress={() => setPaying({ kind: 'booking', bookingId: booking.id })} />
           <View style={styles.hint}>
             <Icon icon={Info} size={14} color="textMuted" />
             <Text variant="caption" color="textMuted">
@@ -123,13 +147,32 @@ export default function EventScreen() {
           </View>
           <Button title={t.event.cancelBooking} variant="ghost" loading={cancelBooking.isPending} onPress={() => cancelBooking.mutate(booking.id)} />
         </>
+      ) : left <= 0 ? (
+        <Button title={t.event.full} disabled />
+      ) : canUsePass ? (
+        <>
+          <Button
+            title={t.event.viaPass}
+            icon={Crown}
+            loading={book.isPending}
+            onPress={() => book.mutate({ eventId: event.id, useSubscription: true })}
+          />
+          <Button title={`${t.event.orPay} ${formatKzt(event.priceKzt)}`} variant="ghost" onPress={bookPaid} />
+        </>
+      ) : isPaid ? (
+        <>
+          <Button title={t.event.bookPaid} loading={book.isPending} onPress={bookPaid} />
+          {event.includedInSubscription ? (
+            <Pressable onPress={() => router.push('/subscription')} style={styles.hint}>
+              <Icon icon={Crown} size={14} color="textMuted" />
+              <Text variant="caption" color="textMuted" style={styles.link}>
+                {t.event.passHint}
+              </Text>
+            </Pressable>
+          ) : null}
+        </>
       ) : (
-        <Button
-          title={left <= 0 ? t.event.full : isPaid ? t.event.bookPaid : t.event.book}
-          disabled={left <= 0}
-          loading={book.isPending}
-          onPress={() => book.mutate(event.id)}
-        />
+        <Button title={t.event.book} loading={book.isPending} onPress={() => book.mutate({ eventId: event.id })} />
       )}
 
       {mutationError ? (
@@ -138,7 +181,7 @@ export default function EventScreen() {
         </Text>
       ) : null}
 
-      {!cancelled ? (
+      {!cancelled && !unpaid ? (
         <Text variant="caption" color="textFaint" style={[styles.center, styles.link]} onPress={() => WebBrowser.openBrowserAsync(LEGAL_LINKS.offer)}>
           {t.event.offerNote}
         </Text>
@@ -152,6 +195,22 @@ export default function EventScreen() {
         <View style={styles.center}>
           <ReportButton target="event" targetId={event.id} />
         </View>
+      ) : null}
+      {paying?.kind === 'booking' ? (
+        <PaymentSheet
+          amountKzt={event.priceKzt}
+          purpose="booking"
+          pay={(payment) => pay.mutateAsync({ bookingId: paying.bookingId, payment })}
+          onClose={() => setPaying(null)}
+        />
+      ) : null}
+      {paying?.kind === 'listing' ? (
+        <PaymentSheet
+          amountKzt={LISTING_FEE_KZT}
+          purpose="listing"
+          pay={(payment) => payListing.mutateAsync({ eventId: event.id, payment })}
+          onClose={() => setPaying(null)}
+        />
       ) : null}
     </View>,
   );
@@ -172,6 +231,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', padding: spacing.lg, gap: spacing.lg },
   key: { width: 96 },
   value: { flex: 1 },
+  notice: { padding: spacing.lg, borderRadius: radius.md, gap: spacing.xs },
   banner: { padding: spacing.lg, borderRadius: radius.md, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.sm },
   center: { textAlign: 'center', alignItems: 'center' },
   link: { textDecorationLine: 'underline' },

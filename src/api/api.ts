@@ -14,10 +14,12 @@ import type {
   NewMessage,
   Organization,
   OrganizationInput,
+  PaymentInput,
   Post,
   ProfileInput,
   ReportReason,
   ReportTarget,
+  Subscription,
   User,
 } from './types';
 import type { CityId } from '@/config/cities';
@@ -33,14 +35,23 @@ export interface Api {
   // Встречи
   listEvents(filter: EventFilter): Promise<EventItem[]>;
   getEvent(id: ID): Promise<EventItem | null>;
+  /** Встреча организации создаётся в статусе awaiting_payment, сообщества — сразу published. */
   createEvent(input: EventInput): Promise<EventItem>;
+  /** Оплата размещения встречи организацией → published. */
+  payEventListing(eventId: ID, payment: PaymentInput): Promise<EventItem>;
   cancelEvent(id: ID): Promise<void>;
 
   // Записи
   myBookings(): Promise<BookingWithEvent[]>;
-  book(eventId: ID): Promise<Booking>;
-  /** Оплата брони. На бэкенде — создание платежа Kaspi и ожидание вебхука. */
-  payBooking(bookingId: ID): Promise<Booking>;
+  book(eventId: ID, options?: { useSubscription?: boolean }): Promise<Booking>;
+  /** Оплата брони. На бэкенде — платёж Kaspi/эквайринга и подтверждение по вебхуку. */
+  payBooking(bookingId: ID, payment: PaymentInput): Promise<Booking>;
+
+  // Подписка LIFESTYLE Pass
+  mySubscription(): Promise<Subscription | null>;
+  subscribe(payment: PaymentInput): Promise<Subscription>;
+  /** Выключает автопродление; подписка действует до конца оплаченного периода. */
+  cancelSubscription(): Promise<Subscription>;
   cancelBooking(bookingId: ID): Promise<void>;
 
   // Организации
@@ -76,6 +87,8 @@ export type ApiErrorCode =
   | 'forbidden'
   | 'not_found'
   | 'event_full'
+  | 'payment_declined'
+  | 'subscription_required'
   | 'validation'
   | 'network'
   | 'server';

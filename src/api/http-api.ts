@@ -1,4 +1,5 @@
 import { ApiError, getAuthToken, type Api } from './api';
+import type { PaymentInput } from './types';
 
 const TIMEOUT_MS = 15_000;
 
@@ -44,6 +45,10 @@ export function createHttpApi(baseUrl: string): Api {
   };
   const id = encodeURIComponent;
 
+  // Данные карты на наш сервер не отправляются никогда (PCI DSS). В продакшене карту принимает
+  // форма/SDK эквайера и отдаёт токен; Kaspi — сервер возвращает ссылку на оплату в приложении Kaspi.
+  const paymentBody = (p: PaymentInput) => ({ method: p.method });
+
   return {
     requestCode: (phone) => request('POST', '/v1/auth/otp', { phone }),
     verifyCode: (phone, code) => request('POST', '/v1/auth/otp/verify', { phone, code }),
@@ -55,10 +60,15 @@ export function createHttpApi(baseUrl: string): Api {
     getEvent: (eid) => request('GET', `/v1/events/${id(eid)}`),
     createEvent: (input) => request('POST', '/v1/events', input),
     cancelEvent: (eid) => request('POST', `/v1/events/${id(eid)}/cancel`),
+    payEventListing: (eid, payment) => request('POST', `/v1/events/${id(eid)}/listing-payment`, paymentBody(payment)),
 
     myBookings: () => request('GET', '/v1/me/bookings'),
-    book: (eventId) => request('POST', `/v1/events/${id(eventId)}/bookings`),
-    payBooking: (bid) => request('POST', `/v1/bookings/${id(bid)}/pay`),
+    book: (eventId, options) => request('POST', `/v1/events/${id(eventId)}/bookings`, { useSubscription: !!options?.useSubscription }),
+    payBooking: (bid, payment) => request('POST', `/v1/bookings/${id(bid)}/pay`, paymentBody(payment)),
+
+    mySubscription: () => request('GET', '/v1/me/subscription'),
+    subscribe: (payment) => request('POST', '/v1/me/subscription', paymentBody(payment)),
+    cancelSubscription: () => request('POST', '/v1/me/subscription/cancel'),
     cancelBooking: (bid) => request('POST', `/v1/bookings/${id(bid)}/cancel`),
 
     myOrganizations: () => request('GET', '/v1/me/organizations'),

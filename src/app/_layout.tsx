@@ -110,6 +110,7 @@ function RootNavigator() {
           <Stack.Screen name="community/new" options={{ title: t.communityForm.title }} />
           <Stack.Screen name="org/[id]" options={{ title: t.org.title }} />
           <Stack.Screen name="org/new" options={{ title: t.orgForm.title }} />
+          <Stack.Screen name="subscription" options={{ title: t.pass.name }} />
         </Stack.Protected>
       </Stack>
     </ThemeProvider>

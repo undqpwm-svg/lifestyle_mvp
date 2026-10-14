@@ -59,3 +59,13 @@ export function formatDuration(ms: number): string {
   const total = Math.max(0, Math.round(ms / 1000));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
+
+/** Подстановка в шаблон перевода: fill('До {n} посещений', { n: 8 }) */
+export function fill(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? `{${k}}`));
+}
+
+/** «14 ноября» */
+export function formatDate(iso: string, lang: Lang): string {
+  return new Date(iso).toLocaleDateString(intlLocale[lang], { day: 'numeric', month: 'long' });
+}

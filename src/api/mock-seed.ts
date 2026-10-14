@@ -2,7 +2,7 @@ import type { CityId } from '@/config/cities';
 
 import { pexels } from '@/lib/media';
 
-import type { Booking, ChatMessage, CommunityRole, InterestId, Organization, Post, User } from './types';
+import type { Booking, ChatMessage, CommunityRole, InterestId, Organization, Payment, Post, Subscription, User } from './types';
 
 // Начальные данные тестового сервера. Даты считаются от текущего момента.
 
@@ -22,7 +22,8 @@ export type DbEvent = {
   capacity: number;
   /** Участники, записанные «до» тестовых данных (в реальной БД — из bookings) */
   seedBooked: number;
-  status: 'published' | 'cancelled';
+  includedInSubscription: boolean;
+  status: 'awaiting_payment' | 'published' | 'cancelled';
   createdBy: string;
 };
 
@@ -50,6 +51,8 @@ export type Db = {
   bookings: Booking[];
   posts: Post[];
   messages: ChatMessage[];
+  payments: (Payment & { userId: string })[];
+  subscriptions: (Subscription & { userId: string })[];
   reports: { target: string; targetId: string; reason: string; userId: string; createdAt: string }[];
 };
 
@@ -129,51 +132,51 @@ export function createSeed(): Db {
       title: 'Мастер-класс: неаполитанская пицца',
       description: 'Шеф покажет, как замесить тесто и выпечь пиццу в дровяной печи. Готовите сами, свою пиццу забираете с собой.',
       venue: 'Pizza Point', address: 'Астана, ул. Достык, 5', startsAt: at(2, 18), durationMin: 120,
-      priceKzt: 8000, capacity: 12, seedBooked: 9, status: 'published', createdBy: 'u-dana',
+      priceKzt: 8000, capacity: 12, seedBooked: 9, includedInSubscription: false, status: 'published', createdBy: 'u-dana',
     },
     {
       id: 'e-volley', coverUrl: pexels(6203560), cityId: 'astana', interestId: 'volleyball', host: { type: 'community', id: 'c-volley' },
       title: 'Волейбол: вечерняя игра',
       description: 'Смешанные команды, уровень — любитель. Мячи есть, нужна только форма.',
       venue: 'Дворец спорта', address: 'Астана, пр. Кабанбай батыра, 45', startsAt: at(0, 19), durationMin: 120,
-      priceKzt: 0, capacity: 12, seedBooked: 8, status: 'published', createdBy: 'u-aman',
+      priceKzt: 0, capacity: 12, seedBooked: 8, includedInSubscription: false, status: 'published', createdBy: 'u-aman',
     },
     {
       id: 'e-football', coverUrl: pexels(3316945), cityId: 'astana', interestId: 'football', host: { type: 'organization', id: 'o-arena' },
       title: 'Футбол 6×6', description: 'Крытое поле, манишки выдаём. Три тайма по 30 минут.',
       venue: 'Qazaq Arena', address: 'Астана, ул. Туран, 57', startsAt: at(1, 18, 30), durationMin: 90,
-      priceKzt: 2500, capacity: 12, seedBooked: 10, status: 'published', createdBy: 'u-aman',
+      priceKzt: 2500, capacity: 12, seedBooked: 10, includedInSubscription: true, status: 'published', createdBy: 'u-aman',
     },
     {
       id: 'e-mafia', coverUrl: pexels(8111358), cityId: 'astana', interestId: 'mafia', host: { type: 'organization', id: 'o-mafia' },
       title: 'Городская мафия: вечер для новичков',
       description: 'Ведущий объяснит правила, сыграем 3–4 партии. Чай и печенье включены.',
       venue: 'Mafia Club Astana', address: 'Астана, пр. Республики, 24', startsAt: at(3, 19, 30), durationMin: 180,
-      priceKzt: 3500, capacity: 20, seedBooked: 14, status: 'published', createdBy: 'u-erlan',
+      priceKzt: 3500, capacity: 20, seedBooked: 14, includedInSubscription: true, status: 'published', createdBy: 'u-erlan',
     },
     {
       id: 'e-board', coverUrl: pexels(8111367), cityId: 'astana', interestId: 'boardgames', host: { type: 'community', id: 'c-boardgames' },
       title: 'Пятничные настолки', description: 'Каркассон, Codenames, Root. Объясняем правила новичкам.',
       venue: 'Антикафе «Ход»', address: 'Астана, ул. Сыганак, 10', startsAt: at(4, 19), durationMin: 180,
-      priceKzt: 0, capacity: 16, seedBooked: 6, status: 'published', createdBy: 'u-erlan',
+      priceKzt: 0, capacity: 16, seedBooked: 6, includedInSubscription: false, status: 'published', createdBy: 'u-erlan',
     },
     {
       id: 'e-run', coverUrl: pexels(2526885), cityId: 'astana', interestId: 'running', host: { type: 'community', id: 'c-run' },
       title: 'Утренняя пробежка 7 км', description: 'Сбор у моста «Атырау», темп 6:00/км.',
       venue: 'Набережная Есиля', address: 'Сбор у моста «Атырау»', startsAt: at(1, 7), durationMin: 60,
-      priceKzt: 0, capacity: 40, seedBooked: 17, status: 'published', createdBy: 'u-dana',
+      priceKzt: 0, capacity: 40, seedBooked: 17, includedInSubscription: false, status: 'published', createdBy: 'u-dana',
     },
     {
       id: 'e-padel', coverUrl: pexels(33641987), cityId: 'almaty', interestId: 'tennis', host: { type: 'organization', id: 'o-padel' },
       title: 'Падел для новичков', description: 'Ракетки выдаём. Тренер покажет базу, потом играем пары.',
       venue: 'Padel Club Almaty', address: 'Алматы, ул. Розыбакиева, 247', startsAt: at(0, 20), durationMin: 90,
-      priceKzt: 6000, capacity: 8, seedBooked: 5, status: 'published', createdBy: 'u-aliya',
+      priceKzt: 6000, capacity: 8, seedBooked: 5, includedInSubscription: true, status: 'published', createdBy: 'u-aliya',
     },
     {
       id: 'e-it', coverUrl: pexels(3194521), cityId: 'almaty', interestId: 'tech', host: { type: 'community', id: 'c-it' },
       title: 'IT-завтрак: AI в продакшене', description: 'Два доклада по 15 минут и свободный нетворкинг.',
       venue: 'Smart Point', address: 'Алматы, пр. Аль-Фараби, 77/8', startsAt: at(2, 9), durationMin: 120,
-      priceKzt: 0, capacity: 50, seedBooked: 31, status: 'published', createdBy: 'u-aliya',
+      priceKzt: 0, capacity: 50, seedBooked: 31, includedInSubscription: false, status: 'published', createdBy: 'u-aliya',
     },
   ];
 
@@ -216,5 +219,5 @@ export function createSeed(): Db {
     msg('m13', 'c-it', 'u-aliya', 20, 'Ищем спикеров на следующий завтрак. Тема — мобильная разработка, 15 минут.'),
   ];
 
-  return { version: 1, users, organizations, communities, members, events, bookings: [], posts, messages, reports: [] };
+  return { version: 1, users, organizations, communities, members, events, bookings: [], posts, messages, payments: [], subscriptions: [], reports: [] };
 }
