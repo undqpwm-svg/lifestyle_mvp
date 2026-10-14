@@ -1,13 +1,16 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { BadgeCheck, Hourglass, MapPin, Plus } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { ORG_TYPES } from '@/api/interests';
 import { useEvents, useOrganization } from '@/api/queries';
 import { useMe } from '@/auth/auth-context';
 import { EventCard } from '@/components/event-card';
+import { ORG_TYPE_ICONS } from '@/components/icons';
 import { ReportButton } from '@/components/report-button';
-import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Cover } from '@/components/ui/cover';
+import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { Section } from '@/components/ui/section';
 import { EmptyView, ErrorView, LoadingView } from '@/components/ui/state-view';
@@ -34,35 +37,40 @@ export default function OrganizationScreen() {
   return (
     <Screen edges={['bottom']}>
       <Stack.Screen options={{ title: org.name }} />
+      <Cover uri={org.coverUrl} fallbackIcon={ORG_TYPE_ICONS[org.type]} style={styles.hero} iconSize={56} />
       <View style={styles.head}>
-        <Avatar name={org.name} emoji={type?.emoji} size={72} />
-        <Text variant="h2" style={styles.center}>
-          {org.name}
-        </Text>
-        <Text variant="caption" color="textMuted" style={styles.center}>
-          {type?.name[lang]}
-          {org.status === 'verified' ? `  ·  ✓ ${t.common.verified}` : ''}
-        </Text>
-        <Text variant="caption" color="textMuted" style={styles.center}>
-          📍 {org.address}
-        </Text>
-        {org.description ? (
-          <Text color="textMuted" style={styles.center}>
-            {org.description}
-          </Text>
-        ) : null}
+        <Text variant="h2">{org.name}</Text>
+        <View style={styles.meta}>
+          <Icon icon={ORG_TYPE_ICONS[org.type]} size={14} color="textMuted" />
+          <Text variant="caption" color="textMuted">{type?.name[lang]}</Text>
+          {org.status === 'verified' ? (
+            <>
+              <Icon icon={BadgeCheck} size={14} />
+              <Text variant="caption">{t.common.verified}</Text>
+            </>
+          ) : null}
+        </View>
+        <View style={styles.meta}>
+          <Icon icon={MapPin} size={14} color="textMuted" />
+          <Text variant="caption" color="textMuted">{org.address}</Text>
+        </View>
+        {org.description ? <Text color="textMuted">{org.description}</Text> : null}
       </View>
 
       {isOwner && org.status !== 'verified' ? (
         <View style={[styles.banner, { backgroundColor: org.status === 'pending' ? colors.accentSoft : colors.surfaceAlt }]}>
-          <Text variant="bodyStrong">{org.status === 'pending' ? `⏳ ${t.org.pending}` : t.org.rejected}</Text>
+          <View style={styles.meta}>
+            {org.status === 'pending' ? <Icon icon={Hourglass} size={16} /> : null}
+            <Text variant="bodyStrong">{org.status === 'pending' ? t.org.pending : t.org.rejected}</Text>
+          </View>
           {org.status === 'pending' ? <Text variant="caption" color="textMuted">{t.org.pendingHint}</Text> : null}
         </View>
       ) : null}
 
       {isOwner && org.status !== 'rejected' ? (
         <Button
-          title={`＋ ${t.org.newEvent}`}
+          title={t.org.newEvent}
+          icon={Plus}
           style={{ marginBottom: spacing.xl }}
           onPress={() => router.push({ pathname: '/event/new', params: { hostType: 'organization', hostId: org.id } })}
         />
@@ -88,7 +96,9 @@ export default function OrganizationScreen() {
 }
 
 const styles = StyleSheet.create({
-  head: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xl, paddingBottom: spacing.xl },
+  hero: { height: 200, marginHorizontal: -spacing.lg },
+  head: { gap: spacing.sm, paddingTop: spacing.lg, paddingBottom: spacing.xl },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   center: { textAlign: 'center' },
   banner: { padding: spacing.lg, borderRadius: radius.md, gap: spacing.xs, marginBottom: spacing.lg },
   footer: { alignItems: 'center' },

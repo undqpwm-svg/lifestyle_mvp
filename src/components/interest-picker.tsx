@@ -5,6 +5,7 @@ import type { InterestId } from '@/api/types';
 import { useAppSettings } from '@/state/app-settings';
 import { spacing } from '@/theme/tokens';
 
+import { INTEREST_ICONS } from './icons';
 import { Chip } from './ui/chip';
 
 type Props =
@@ -24,7 +25,7 @@ export function InterestPicker(props: Props) {
   return (
     <View style={styles.wrap}>
       {INTERESTS.map((i) => (
-        <Chip key={i.id} label={`${i.emoji} ${i.name[lang]}`} active={isActive(i.id)} onPress={() => toggle(i.id)} />
+        <Chip key={i.id} icon={INTEREST_ICONS[i.id]} label={i.name[lang]} active={isActive(i.id)} onPress={() => toggle(i.id)} />
       ))}
     </View>
   );

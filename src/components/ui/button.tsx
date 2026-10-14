@@ -3,18 +3,20 @@ import { ActivityIndicator, Pressable, StyleSheet, type PressableProps, type Vie
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
+import { Icon, type LucideIcon } from './icon';
 import { Text } from './text';
 
 type Variant = 'primary' | 'dark' | 'ghost';
 
 type Props = Omit<PressableProps, 'style'> & {
   title: string;
+  icon?: LucideIcon;
   variant?: Variant;
   loading?: boolean;
   style?: ViewStyle;
 };
 
-export function Button({ title, variant = 'primary', loading, disabled, style, ...rest }: Props) {
+export function Button({ title, icon, variant = 'primary', loading, disabled, style, ...rest }: Props) {
   const { colors } = useTheme();
   const bg = { primary: colors.accent, dark: colors.inverse, ghost: 'transparent' }[variant];
   const fg = { primary: 'onAccent', dark: 'onInverse', ghost: 'text' } as const;
@@ -35,9 +37,12 @@ export function Button({ title, variant = 'primary', loading, disabled, style, .
       {loading ? (
         <ActivityIndicator color={colors[fg[variant]]} />
       ) : (
-        <Text variant="bodyStrong" color={fg[variant]}>
-          {title}
-        </Text>
+        <>
+          {icon ? <Icon icon={icon} size={18} color={fg[variant]} /> : null}
+          <Text variant="bodyStrong" color={fg[variant]} numberOfLines={1}>
+            {title}
+          </Text>
+        </>
       )}
     </Pressable>
   );
@@ -48,6 +53,8 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: spacing.xl,
     borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,15 +1,18 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import { BadgeCheck, Hourglass, LogOut, Plus, Star, XCircle } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { interestById } from '@/api/interests';
 import { useMyCommunities, useMyOrganizations } from '@/api/queries';
 import { useAuth, useMe } from '@/auth/auth-context';
 import { CityPicker } from '@/components/city-picker';
+import { INTEREST_ICONS } from '@/components/icons';
 import { SettingsRow } from '@/components/settings-row';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
@@ -31,7 +34,11 @@ export default function ProfileScreen() {
   const open = (url: string) => WebBrowser.openBrowserAsync(url);
   const group = [styles.group, { backgroundColor: colors.surface, borderColor: colors.line }];
 
-  const orgStatus = { pending: `⏳ ${t.org.pending}`, verified: `✓ ${t.common.verified}`, rejected: t.org.rejected };
+  const orgStatus = {
+    pending: { label: t.org.pending, icon: Hourglass },
+    verified: { label: t.common.verified, icon: BadgeCheck },
+    rejected: { label: t.org.rejected, icon: XCircle },
+  };
 
   return (
     <Screen tabBarInset>
@@ -53,8 +60,9 @@ export default function ProfileScreen() {
             const i = interestById.get(id);
             return i ? (
               <View key={id} style={[styles.tag, { borderColor: 'rgba(255,255,255,0.2)' }]}>
+                <Icon icon={INTEREST_ICONS[id]} size={14} color="onInverse" />
                 <Text variant="caption" color="onInverse">
-                  {i.emoji} {i.name[lang]}
+                  {i.name[lang]}
                 </Text>
               </View>
             ) : null;
@@ -70,11 +78,12 @@ export default function ProfileScreen() {
           <SettingsRow
             key={o.id}
             label={o.name}
-            value={orgStatus[o.status]}
+            value={orgStatus[o.status].label}
+            valueIcon={orgStatus[o.status].icon}
             onPress={() => router.push({ pathname: '/org/[id]', params: { id: o.id } })}
           />
         ))}
-        <SettingsRow label={`＋ ${t.profile.addOrg}`} onPress={() => router.push('/org/new')} last />
+        <SettingsRow icon={Plus} label={t.profile.addOrg} onPress={() => router.push('/org/new')} last />
       </View>
 
       <Text variant="h3" style={styles.groupTitle}>
@@ -85,11 +94,11 @@ export default function ProfileScreen() {
           <SettingsRow
             key={c.id}
             label={c.name}
-            value={c.myRole === 'owner' ? '★' : undefined}
+            valueIcon={c.myRole === 'owner' ? Star : undefined}
             onPress={() => router.push({ pathname: '/community/[id]', params: { id: c.id } })}
           />
         ))}
-        <SettingsRow label={`＋ ${t.communities.create}`} onPress={() => router.push('/community/new')} last />
+        <SettingsRow icon={Plus} label={t.communities.create} onPress={() => router.push('/community/new')} last />
       </View>
 
       <View style={[group, { marginTop: spacing.lg }]}>
@@ -103,7 +112,7 @@ export default function ProfileScreen() {
         <SettingsRow label={t.profile.privacy} onPress={() => open(LEGAL_LINKS.privacy)} last />
       </View>
 
-      <Button title={t.profile.signOut} variant="ghost" onPress={signOut} />
+      <Button title={t.profile.signOut} icon={LogOut} variant="ghost" onPress={signOut} />
       <Text variant="caption" color="textFaint" style={styles.version}>
         {t.profile.version} {Constants.expoConfig?.version ?? '—'}
       </Text>
@@ -115,7 +124,7 @@ const styles = StyleSheet.create({
   hero: { borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg, marginTop: spacing.lg, marginBottom: spacing.xl },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  tag: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 4 },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 4 },
   groupTitle: { marginBottom: spacing.md },
   group: { borderRadius: radius.lg, borderWidth: 1, marginBottom: spacing.lg, overflow: 'hidden' },
   version: { textAlign: 'center', marginTop: spacing.md },

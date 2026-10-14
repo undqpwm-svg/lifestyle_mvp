@@ -7,6 +7,7 @@ import { useCreateOrganization } from '@/api/queries';
 import type { OrgType } from '@/api/types';
 import { useMe } from '@/auth/auth-context';
 import { CityPicker } from '@/components/city-picker';
+import { ORG_TYPE_ICONS } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { Screen } from '@/components/ui/screen';
@@ -37,7 +38,7 @@ export default function NewOrganizationScreen() {
           <Text variant="caption" color="textMuted">{t.orgForm.type}</Text>
           <View style={styles.chips}>
             {ORG_TYPES.map((o) => (
-              <Chip key={o.id} label={`${o.emoji} ${o.name[lang]}`} active={type === o.id} onPress={() => setType(o.id)} />
+              <Chip key={o.id} icon={ORG_TYPE_ICONS[o.id]} label={o.name[lang]} active={type === o.id} onPress={() => setType(o.id)} />
             ))}
           </View>
         </View>

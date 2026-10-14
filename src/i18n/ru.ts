@@ -129,7 +129,7 @@ export const ru = {
     join: 'Вступить',
     leave: 'Выйти',
     owner: 'Вы владелец',
-    chat: 'Чат в Telegram',
+    chat: 'Чат',
     events: 'Встречи',
     feed: 'Лента',
     noEvents: 'Ближайших встреч нет',

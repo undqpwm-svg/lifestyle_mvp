@@ -20,7 +20,7 @@ export type InterestId =
   | 'music'
   | 'tech';
 
-// ── Пользователь ──────────────────────────────────────────────
+// Пользователь
 export type User = {
   id: ID;
   phone: string;
@@ -32,7 +32,7 @@ export type User = {
 
 export type ProfileInput = Pick<User, 'name' | 'cityId' | 'interests'>;
 
-// ── Организация (кафе, клуб, спорткомплекс, студия) ───────────
+// Организация (кафе, клуб, спорткомплекс, студия)
 export type OrgType = 'cafe' | 'sports' | 'club' | 'studio' | 'other';
 
 /** pending — на модерации; verified — проверена, можно продавать билеты */
@@ -48,13 +48,14 @@ export type Organization = {
   /** БИН (ТОО) или ИИН (ИП) — 12 цифр */
   bin: string;
   status: OrgStatus;
+  coverUrl?: string;
   ownerId: ID;
   createdAt: ISODate;
 };
 
 export type OrganizationInput = Pick<Organization, 'name' | 'type' | 'cityId' | 'address' | 'description' | 'bin'>;
 
-// ── Сообщество по интересам ──────────────────────────────────
+// Сообщество по интересам
 export type CommunityRole = 'owner' | 'moderator' | 'member';
 
 export type Community = {
@@ -67,6 +68,7 @@ export type Community = {
   membersCount: number;
   /** Ссылка на чат в Telegram — переписка в MVP живёт там */
   telegramUrl?: string;
+  coverUrl?: string;
   /** Роль текущего пользователя; null — не участник */
   myRole: CommunityRole | null;
   createdAt: ISODate;
@@ -83,7 +85,7 @@ export type Post = {
   createdAt: ISODate;
 };
 
-// ── Встреча ──────────────────────────────────────────────────
+// Встреча
 export type HostType = 'organization' | 'community';
 
 /** Кто проводит встречу. Денормализовано для ленты, чтобы не делать N запросов. */
@@ -97,6 +99,8 @@ export type EventItem = {
   interestId: InterestId;
   title: string;
   description: string;
+  /** Фото встречи; если нет — клиент показывает обложку по категории */
+  coverUrl?: string;
   host: HostRef;
   venue: string;
   address: string;
@@ -127,7 +131,7 @@ export type EventInput = {
 
 export type EventFilter = { cityId: CityId; interestId?: InterestId; hostType?: HostType; hostId?: ID };
 
-// ── Запись на встречу ────────────────────────────────────────
+// Запись на встречу
 /** pending_payment — место удерживается до оплаты; confirmed — участник */
 export type BookingStatus = 'pending_payment' | 'confirmed' | 'cancelled';
 
@@ -141,11 +145,11 @@ export type Booking = {
 
 export type BookingWithEvent = Booking & { event: EventItem };
 
-// ── Модерация ────────────────────────────────────────────────
+// Модерация
 export type ReportTarget = 'event' | 'community' | 'post' | 'organization' | 'user';
 export type ReportReason = 'spam' | 'fraud' | 'offensive' | 'other';
 
-// ── Авторизация ──────────────────────────────────────────────
+// Авторизация
 export type AuthResult = { token: string; user: User; isNew: boolean };
 
 /** Профиль считается заполненным, когда есть имя и хотя бы один интерес. */

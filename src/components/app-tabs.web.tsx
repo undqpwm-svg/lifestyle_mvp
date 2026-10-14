@@ -6,12 +6,14 @@ import {
   type TabListProps,
   type TabTriggerSlotProps,
 } from 'expo-router/ui';
+import { CalendarDays, Ticket, User, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useAppSettings } from '@/state/app-settings';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
+import { Icon, type LucideIcon } from './ui/icon';
 import { Text } from './ui/text';
 
 // Веб-версия таббара (для превью в браузере): плавающая «пилюля» снизу в стиле сайта.
@@ -25,16 +27,16 @@ export default function AppTabs() {
       <TabList asChild>
         <FloatingTabList>
           <TabTrigger name="index" href="/" asChild>
-            <TabButton icon="📅" label={t.tabs.events} />
+            <TabButton icon={CalendarDays} label={t.tabs.events} />
           </TabTrigger>
           <TabTrigger name="communities" href="/communities" asChild>
-            <TabButton icon="👥" label={t.tabs.communities} />
+            <TabButton icon={Users} label={t.tabs.communities} />
           </TabTrigger>
           <TabTrigger name="bookings" href="/bookings" asChild>
-            <TabButton icon="🎫" label={t.tabs.bookings} />
+            <TabButton icon={Ticket} label={t.tabs.bookings} />
           </TabTrigger>
           <TabTrigger name="profile" href="/profile" asChild>
-            <TabButton icon="👤" label={t.tabs.profile} />
+            <TabButton icon={User} label={t.tabs.profile} />
           </TabTrigger>
         </FloatingTabList>
       </TabList>
@@ -51,11 +53,11 @@ function FloatingTabList({ children, style, ...props }: TabListProps) {
   );
 }
 
-function TabButton({ icon, label, isFocused, ...props }: TabTriggerSlotProps & { icon: string; label: string }) {
+function TabButton({ icon, label, isFocused, ...props }: TabTriggerSlotProps & { icon: LucideIcon; label: string }) {
   const { colors } = useTheme();
   return (
     <Pressable {...props} style={[styles.btn, isFocused && { backgroundColor: colors.accent }]}>
-      <Text style={styles.icon}>{icon}</Text>
+      <Icon icon={icon} size={20} color={isFocused ? 'onAccent' : 'onInverse'} />
       <Text variant="label" color={isFocused ? 'onAccent' : 'onInverse'} numberOfLines={1}>
         {label}
       </Text>
@@ -67,5 +69,4 @@ const styles = StyleSheet.create({
   wrap: { position: 'absolute', bottom: spacing.lg, left: spacing.md, right: spacing.md, alignItems: 'center' },
   bar: { flexDirection: 'row', padding: 6, borderRadius: radius.pill, gap: 2, width: '100%', maxWidth: 480 },
   btn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: radius.pill, gap: 2 },
-  icon: { fontSize: 16, lineHeight: 20 },
 });

@@ -131,7 +131,7 @@ export const kz: Dictionary = {
     join: 'Қосылу',
     leave: 'Шығу',
     owner: 'Сіз иесісіз',
-    chat: 'Telegram-дағы чат',
+    chat: 'Чат',
     events: 'Кездесулер',
     feed: 'Лента',
     noEvents: 'Жақын арада кездесу жоқ',

@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
+import { Info, Store, Users } from 'lucide-react-native';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useCreateEvent, useMyCommunities, useMyOrganizations } from '@/api/queries';
@@ -7,6 +8,7 @@ import type { HostRef, HostType, InterestId } from '@/api/types';
 import { InterestPicker } from '@/components/interest-picker';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
+import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { Sheet, SheetOption } from '@/components/ui/sheet';
 import { EmptyView, LoadingView } from '@/components/ui/state-view';
@@ -134,7 +136,9 @@ export default function NewEventScreen() {
         <View style={styles.block}>
           <Text variant="caption" color="textMuted">{t.eventForm.host}</Text>
           <SheetOption
-            label={host ? `${host.type === 'community' ? '👥' : '🏢'} ${host.name}${host.verified ? ' ✓' : ''}` : '—'}
+            icon={host?.type === 'community' ? Users : Store}
+            label={host?.name ?? '—'}
+            hint={host?.verified ? t.common.verified : undefined}
             onPress={() => setHostOpen(true)}
           />
         </View>
@@ -199,7 +203,8 @@ export default function NewEventScreen() {
         </View>
         {!canCharge ? (
           <View style={[styles.note, { backgroundColor: colors.surfaceAlt }]}>
-            <Text variant="caption" color="textMuted">ℹ️ {t.eventForm.paidLocked}</Text>
+            <Icon icon={Info} size={16} color="textMuted" />
+            <Text variant="caption" color="textMuted" style={{ flex: 1 }}>{t.eventForm.paidLocked}</Text>
           </View>
         ) : null}
 
@@ -211,7 +216,9 @@ export default function NewEventScreen() {
         {hosts.map((h) => (
           <SheetOption
             key={`${h.type}:${h.id}`}
-            label={`${h.type === 'community' ? '👥' : '🏢'} ${h.name}${h.verified ? ' ✓' : ''}`}
+            icon={h.type === 'community' ? Users : Store}
+            label={h.name}
+            hint={h.verified ? t.common.verified : undefined}
             active={h === host}
             onPress={() => {
               setHostKey(`${h.type}:${h.id}`);
@@ -229,5 +236,5 @@ const styles = StyleSheet.create({
   block: { gap: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.md },
   col: { flex: 1 },
-  note: { padding: spacing.md, borderRadius: radius.md, marginTop: -spacing.md },
+  note: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, marginTop: -spacing.md },
 });

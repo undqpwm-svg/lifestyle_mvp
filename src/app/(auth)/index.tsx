@@ -1,77 +1,91 @@
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import { Send, Users } from 'lucide-react-native';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { INTERESTS } from '@/api/interests';
-import { Button } from '@/components/ui/button';
-import { Screen } from '@/components/ui/screen';
+import { Cover } from '@/components/ui/cover';
+import { Icon, type LucideIcon } from '@/components/ui/icon';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
 import { LEGAL_LINKS } from '@/config/links';
 import { LANGS } from '@/i18n';
+import { pexels, WELCOME_PHOTO } from '@/lib/media';
 import { useAppSettings } from '@/state/app-settings';
-import { radius, spacing } from '@/theme/tokens';
-import { useTheme } from '@/theme/use-theme';
+import { fonts, palette, radius, spacing } from '@/theme/tokens';
 
+// Экран приветствия в фирменных цветах сайта: фото людей сверху, жёлтая панель снизу.
+// Цвета зафиксированы (не зависят от тёмной темы) — это «обложка» бренда.
 export default function WelcomeScreen() {
-  const { colors } = useTheme();
   const { t, lang, setLang } = useAppSettings();
   const [tgNote, setTgNote] = useState(false);
 
   return (
-    <Screen background="inverse" edges={['top', 'bottom']}>
-      <View style={styles.top}>
-        <Segmented options={LANGS} value={lang} onChange={setLang} />
-      </View>
+    <View style={styles.root}>
+      <Cover uri={pexels(WELCOME_PHOTO, 1200)} fallbackIcon={Users} style={styles.photo} iconSize={64}>
+        <SafeAreaView edges={['top']} style={styles.topBar}>
+          <View style={styles.wordmark}>
+            <Text style={styles.wordmarkText}>LIFESTYLE</Text>
+          </View>
+          <Segmented options={LANGS} value={lang} onChange={setLang} />
+        </SafeAreaView>
+      </Cover>
 
-      <View style={styles.hero}>
-        <View style={[styles.logo, { backgroundColor: colors.accent }]}>
-          <Text variant="h1" color="onAccent">
-            L
-          </Text>
-        </View>
-        <Text variant="h1" color="onInverse" style={styles.brand}>
-          LIFESTYLE
-        </Text>
-        <Text color="onInverse" style={styles.tagline}>
-          {t.auth.tagline}
-        </Text>
-        <View style={styles.cloud}>
-          {INTERESTS.slice(0, 9).map((i) => (
-            <View key={i.id} style={[styles.tag, { borderColor: 'rgba(255,255,255,0.18)' }]}>
-              <Text variant="caption" color="onInverse">
-                {i.emoji} {i.name[lang]}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
+      <SafeAreaView edges={['bottom']} style={styles.panel}>
+        <View style={styles.inner}>
+          <Text style={styles.headline}>{t.events.greeting}</Text>
+          <Text style={styles.tagline}>{t.auth.tagline}</Text>
 
-      <View style={styles.actions}>
-        <Button title={t.auth.start} onPress={() => router.push('/phone')} />
-        <Button title={t.auth.telegram} variant="dark" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} onPress={() => setTgNote(true)} />
-        {tgNote ? (
-          <Text variant="caption" color="onInverse" style={styles.note}>
-            {t.auth.telegramSoon}
-          </Text>
-        ) : null}
-        <Text variant="caption" color="onInverse" style={[styles.note, { opacity: 0.5 }]} onPress={() => WebBrowser.openBrowserAsync(LEGAL_LINKS.offer)}>
-          {t.auth.terms}
-        </Text>
-      </View>
-    </Screen>
+          <View style={styles.actions}>
+            <WelcomeButton title={t.auth.start} filled onPress={() => router.push('/phone')} />
+            <WelcomeButton title={t.auth.telegram} icon={Send} onPress={() => setTgNote(true)} />
+            {tgNote ? <Text style={styles.note}>{t.auth.telegramSoon}</Text> : null}
+            <Text style={[styles.note, styles.terms]} onPress={() => WebBrowser.openBrowserAsync(LEGAL_LINKS.offer)}>
+              {t.auth.terms}
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+function WelcomeButton({ title, icon, filled, onPress }: { title: string; icon?: LucideIcon; filled?: boolean; onPress: () => void }) {
+  const fg = filled ? palette.cream : palette.ink;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.btn, filled ? styles.btnFilled : styles.btnOutline, { opacity: pressed ? 0.85 : 1 }]}>
+      {icon ? <Icon icon={icon} size={18} tint={fg} /> : null}
+      <Text variant="bodyStrong" style={{ color: fg }}>
+        {title}
+      </Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  top: { alignItems: 'flex-end', paddingTop: spacing.md },
-  hero: { flex: 1, justifyContent: 'center', gap: spacing.lg, paddingVertical: spacing.xxl },
-  logo: { width: 64, height: 64, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  brand: { fontSize: 40, lineHeight: 44 },
-  tagline: { fontSize: 18, lineHeight: 26, opacity: 0.8 },
-  cloud: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
-  tag: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
-  actions: { gap: spacing.md, paddingBottom: spacing.lg },
-  note: { textAlign: 'center', opacity: 0.75 },
+  root: { flex: 1, backgroundColor: palette.yellow },
+  photo: { flex: 1, minHeight: 240 },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  wordmark: { backgroundColor: palette.yellow, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.sm },
+  wordmarkText: { fontFamily: fonts.display, fontSize: 15, letterSpacing: 1.5, color: palette.ink },
+  panel: { backgroundColor: palette.yellow },
+  inner: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xl, gap: spacing.md },
+  headline: { fontFamily: fonts.display, fontSize: 36, lineHeight: 40, letterSpacing: -1.2, color: palette.ink },
+  tagline: { fontFamily: fonts.body, fontSize: 16, lineHeight: 23, color: palette.ink, opacity: 0.72 },
+  actions: { gap: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.lg },
+  btn: { minHeight: 54, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  btnFilled: { backgroundColor: palette.ink },
+  btnOutline: { borderWidth: 1.5, borderColor: palette.ink },
+  note: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: palette.ink, textAlign: 'center', opacity: 0.75 },
+  terms: { opacity: 0.55 },
 });

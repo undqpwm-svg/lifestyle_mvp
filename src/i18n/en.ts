@@ -131,7 +131,7 @@ export const en: Dictionary = {
     join: 'Join',
     leave: 'Leave',
     owner: "You're the owner",
-    chat: 'Telegram chat',
+    chat: 'Chat',
     events: 'Meetups',
     feed: 'Feed',
     noEvents: 'No upcoming meetups',

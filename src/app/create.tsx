@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
+import { CalendarDays, Store, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useAppSettings } from '@/state/app-settings';
@@ -12,9 +14,9 @@ export default function CreateScreen() {
   const { colors } = useTheme();
   const { t } = useAppSettings();
   const items = [
-    { emoji: '📅', title: t.create.event, hint: t.create.eventHint, href: '/event/new' as const },
-    { emoji: '👥', title: t.create.community, hint: t.create.communityHint, href: '/community/new' as const },
-    { emoji: '🏢', title: t.create.organization, hint: t.create.organizationHint, href: '/org/new' as const },
+    { icon: CalendarDays, title: t.create.event, hint: t.create.eventHint, href: '/event/new' as const },
+    { icon: Users, title: t.create.community, hint: t.create.communityHint, href: '/community/new' as const },
+    { icon: Store, title: t.create.organization, hint: t.create.organizationHint, href: '/org/new' as const },
   ];
   return (
     <Screen edges={['bottom']}>
@@ -25,7 +27,7 @@ export default function CreateScreen() {
             onPress={() => router.replace(i.href)}
             style={({ pressed }) => [styles.item, { backgroundColor: colors.surface, borderColor: colors.line, opacity: pressed ? 0.85 : 1 }]}>
             <View style={[styles.icon, { backgroundColor: colors.accent }]}>
-              <Text style={{ fontSize: 24 }}>{i.emoji}</Text>
+              <Icon icon={i.icon} size={24} color="onAccent" />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <Text variant="h3">{i.title}</Text>

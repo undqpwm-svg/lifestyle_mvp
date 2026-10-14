@@ -5,6 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
+import { Check } from 'lucide-react-native';
+
+import { Icon, type LucideIcon } from './icon';
 import { Text } from './text';
 
 // Нижняя шторка поверх экрана: выбор города, причины жалобы и т.п.
@@ -41,7 +44,19 @@ export function Sheet({
   );
 }
 
-export function SheetOption({ label, hint, active, onPress }: { label: string; hint?: string; active?: boolean; onPress: () => void }) {
+export function SheetOption({
+  label,
+  hint,
+  icon,
+  active,
+  onPress,
+}: {
+  label: string;
+  hint?: string;
+  icon?: LucideIcon;
+  active?: boolean;
+  onPress: () => void;
+}) {
   const { colors } = useTheme();
   return (
     <Pressable
@@ -50,6 +65,7 @@ export function SheetOption({ label, hint, active, onPress }: { label: string; h
         styles.option,
         { borderColor: colors.line, backgroundColor: active ? colors.accentSoft : colors.surface, opacity: pressed ? 0.8 : 1 },
       ]}>
+      {icon ? <Icon icon={icon} size={20} /> : null}
       <Text variant="bodyStrong" style={{ flex: 1 }}>
         {label}
         {hint ? (
@@ -59,7 +75,7 @@ export function SheetOption({ label, hint, active, onPress }: { label: string; h
           </Text>
         ) : null}
       </Text>
-      {active ? <Text variant="bodyStrong">✓</Text> : null}
+      {active ? <Icon icon={Check} size={20} /> : null}
     </Pressable>
   );
 }

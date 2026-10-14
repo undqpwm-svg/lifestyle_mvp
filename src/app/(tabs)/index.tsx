@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -7,6 +8,7 @@ import { useEvents } from '@/api/queries';
 import type { InterestId } from '@/api/types';
 import { useMe } from '@/auth/auth-context';
 import { CityPicker } from '@/components/city-picker';
+import { INTEREST_ICONS } from '@/components/icons';
 import { EventCard } from '@/components/event-card';
 import { Chip } from '@/components/ui/chip';
 import { IconButton } from '@/components/ui/icon-button';
@@ -42,7 +44,7 @@ export default function EventsScreen() {
       <View style={styles.header}>
         <View style={styles.row}>
           <CityPicker />
-          <IconButton icon="+" label={t.create.title} onPress={() => router.push('/create')} />
+          <IconButton icon={Plus} label={t.create.title} onPress={() => router.push('/create')} />
         </View>
         <Text variant="h1">{t.events.greeting}</Text>
       </View>
@@ -50,7 +52,7 @@ export default function EventsScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chips}>
         <Chip label={t.events.all} active={interest === 'all'} onPress={() => setInterest('all')} />
         {chips.map((c) => (
-          <Chip key={c.id} label={`${c.emoji} ${c.name[lang]}`} active={interest === c.id} onPress={() => setInterest(c.id)} />
+          <Chip key={c.id} icon={INTEREST_ICONS[c.id]} label={c.name[lang]} active={interest === c.id} onPress={() => setInterest(c.id)} />
         ))}
       </ScrollView>
 

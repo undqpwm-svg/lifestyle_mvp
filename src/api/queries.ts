@@ -27,7 +27,7 @@ export const qk = {
   posts: (id: ID) => ['posts', id] as const,
 };
 
-// ── Чтение ───────────────────────────────────────────────────
+// Чтение
 export const useEvents = (f: EventFilter) => useQuery({ queryKey: qk.events(f), queryFn: () => api.listEvents(f) });
 export const useEvent = (id: ID) => useQuery({ queryKey: qk.event(id), queryFn: () => api.getEvent(id) });
 export const useMyBookings = () => useQuery({ queryKey: qk.bookings, queryFn: () => api.myBookings() });
@@ -40,7 +40,7 @@ export const useCommunity = (id: ID) => useQuery({ queryKey: qk.community(id), q
 export const usePosts = (communityId: ID) =>
   useQuery({ queryKey: qk.posts(communityId), queryFn: () => api.listPosts(communityId) });
 
-// ── Изменение ────────────────────────────────────────────────
+// Изменение
 function useInvalidate() {
   const qc = useQueryClient();
   return (...keys: readonly (readonly unknown[])[]) =>

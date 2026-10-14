@@ -4,12 +4,13 @@ import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { fonts, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
+import { Icon, type LucideIcon } from './icon';
 import { Text } from './text';
 
-type Props = TextInputProps & { label?: string; hint?: string; error?: string | null; prefix?: string };
+type Props = TextInputProps & { label?: string; hint?: string; error?: string | null; prefix?: string; icon?: LucideIcon };
 
 export const TextField = forwardRef<TextInput, Props>(function TextField(
-  { label, hint, error, prefix, multiline, style, onFocus, onBlur, ...rest },
+  { label, hint, error, prefix, icon, multiline, style, onFocus, onBlur, ...rest },
   ref,
 ) {
   const { colors } = useTheme();
@@ -24,6 +25,7 @@ export const TextField = forwardRef<TextInput, Props>(function TextField(
         </Text>
       ) : null}
       <View style={[styles.box, { borderColor, backgroundColor: colors.surface }, multiline && styles.multiBox]}>
+        {icon ? <Icon icon={icon} size={18} color="textFaint" /> : null}
         {prefix ? <Text variant="bodyStrong">{prefix}</Text> : null}
         <TextInput
           ref={ref}

@@ -1,14 +1,18 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { MapPin, Plus, Send, Star, Users } from 'lucide-react-native';
 import { Linking, StyleSheet, View } from 'react-native';
 
 import { interestById } from '@/api/interests';
 import { useCommunity, useCreatePost, useEvents, useJoinCommunity, usePosts } from '@/api/queries';
+import { communityCover } from '@/components/community-card';
 import { EventCard } from '@/components/event-card';
+import { INTEREST_ICONS } from '@/components/icons';
 import { PostItem } from '@/components/post-item';
 import { ReportButton } from '@/components/report-button';
-import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Cover } from '@/components/ui/cover';
+import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { Segmented } from '@/components/ui/segmented';
 import { EmptyView, ErrorView, LoadingView } from '@/components/ui/state-view';
@@ -36,25 +40,41 @@ export default function CommunityScreen() {
   return (
     <Screen edges={['bottom']}>
       <Stack.Screen options={{ title: c.name }} />
+      <Cover
+        uri={communityCover(c, 1200)}
+        fallbackIcon={c.interests[0] ? INTEREST_ICONS[c.interests[0]] : Users}
+        style={styles.hero}
+        iconSize={56}
+      />
       <View style={styles.head}>
-        <Avatar name={c.name} emoji={interestById.get(c.interests[0])?.emoji} size={72} />
-        <Text variant="h2" style={styles.center}>
-          {c.name}
-        </Text>
-        <Text variant="caption" color="textMuted" style={styles.center}>
-          📍 {getCity(c.cityId).name[lang]} · {c.membersCount} {t.common.members} ·{' '}
-          {c.interests.map((i) => interestById.get(i)?.emoji).join(' ')}
-        </Text>
-        <Text color="textMuted" style={styles.center}>
-          {c.description}
-        </Text>
+        <Text variant="h2">{c.name}</Text>
+        <View style={styles.metaRow}>
+          <View style={styles.meta}>
+            <Icon icon={MapPin} size={14} color="textMuted" />
+            <Text variant="caption" color="textMuted">{getCity(c.cityId).name[lang]}</Text>
+          </View>
+          <View style={styles.meta}>
+            <Icon icon={Users} size={14} color="textMuted" />
+            <Text variant="caption" color="textMuted">
+              {c.membersCount} {t.common.members}
+            </Text>
+          </View>
+          {c.interests.map((i) => (
+            <View key={i} style={styles.meta}>
+              <Icon icon={INTEREST_ICONS[i]} size={14} color="textMuted" />
+              <Text variant="caption" color="textMuted">{interestById.get(i)?.name[lang]}</Text>
+            </View>
+          ))}
+        </View>
+        <Text color="textMuted">{c.description}</Text>
       </View>
 
       <MembershipActions id={c.id} role={c.myRole} telegramUrl={c.telegramUrl} />
 
       {canManage ? (
         <Button
-          title={`＋ ${t.community.newEvent}`}
+          title={t.community.newEvent}
+          icon={Plus}
           variant="ghost"
           style={{ marginBottom: spacing.lg }}
           onPress={() => router.push({ pathname: '/event/new', params: { hostType: 'community', hostId: c.id } })}
@@ -89,7 +109,7 @@ function MembershipActions({ id, role, telegramUrl }: { id: string; role: string
   return (
     <View style={styles.actions}>
       {role === 'owner' ? (
-        <Button title={`★ ${t.community.owner}`} variant="ghost" disabled style={styles.flex} />
+        <Button title={t.community.owner} icon={Star} variant="ghost" disabled style={styles.flex} />
       ) : (
         <Button
           title={role ? t.community.leave : t.community.join}
@@ -99,7 +119,7 @@ function MembershipActions({ id, role, telegramUrl }: { id: string; role: string
           onPress={() => join.mutate({ id, join: !role })}
         />
       )}
-      {telegramUrl ? <Button title={t.community.chat} variant="dark" style={styles.chatBtn} onPress={() => Linking.openURL(telegramUrl)} /> : null}
+      {telegramUrl ? <Button title={t.community.chat} icon={Send} variant="dark" style={styles.chatBtn} onPress={() => Linking.openURL(telegramUrl)} /> : null}
       {join.error ? <Text variant="caption" color="danger">{errorMessage(join.error, t)}</Text> : null}
     </View>
   );
@@ -154,7 +174,10 @@ function CommunityFeed({ id, isMember }: { id: string; isMember: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  head: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xl, paddingBottom: spacing.lg },
+  hero: { height: 200, marginHorizontal: -spacing.lg },
+  head: { gap: spacing.sm, paddingTop: spacing.lg, paddingBottom: spacing.lg },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md, rowGap: 4 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   center: { textAlign: 'center' },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.lg },
   flex: { flex: 1, minWidth: 140 },

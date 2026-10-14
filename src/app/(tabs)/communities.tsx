@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { Plus, Search } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -7,6 +8,7 @@ import { useCommunities } from '@/api/queries';
 import type { InterestId } from '@/api/types';
 import { useMe } from '@/auth/auth-context';
 import { CommunityCard } from '@/components/community-card';
+import { INTEREST_ICONS } from '@/components/icons';
 import { Chip } from '@/components/ui/chip';
 import { IconButton } from '@/components/ui/icon-button';
 import { Screen } from '@/components/ui/screen';
@@ -46,16 +48,17 @@ export default function CommunitiesScreen() {
       <View style={styles.header}>
         <View style={styles.row}>
           <Text variant="h1">{t.communities.title}</Text>
-          <IconButton icon="+" label={t.communities.create} onPress={() => router.push('/community/new')} />
+          <IconButton icon={Plus} label={t.communities.create} onPress={() => router.push('/community/new')} />
         </View>
-        <TextField placeholder={`🔍 ${t.communities.search}`} value={query} onChangeText={setQuery} returnKeyType="search" />
+        <TextField icon={Search} placeholder={t.communities.search} value={query} onChangeText={setQuery} returnKeyType="search" />
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chips}>
         {chips.map((c) => (
           <Chip
             key={c.id}
-            label={`${c.emoji} ${c.name[lang]}`}
+            icon={INTEREST_ICONS[c.id]}
+            label={c.name[lang]}
             active={interest === c.id}
             onPress={() => setInterest(interest === c.id ? undefined : c.id)}
           />

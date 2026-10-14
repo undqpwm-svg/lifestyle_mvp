@@ -1,14 +1,24 @@
+import { ChevronRight } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
+import { Icon, type LucideIcon } from './ui/icon';
 import { Text } from './ui/text';
 
-type Props = { label: string; value?: string; right?: ReactNode; onPress?: () => void; last?: boolean };
+type Props = {
+  label: string;
+  icon?: LucideIcon;
+  value?: string;
+  valueIcon?: LucideIcon;
+  right?: ReactNode;
+  onPress?: () => void;
+  last?: boolean;
+};
 
-export function SettingsRow({ label, value, right, onPress, last }: Props) {
+export function SettingsRow({ label, icon, value, valueIcon, right, onPress, last }: Props) {
   const { colors } = useTheme();
   const rowStyle = [
     styles.row,
@@ -16,11 +26,15 @@ export function SettingsRow({ label, value, right, onPress, last }: Props) {
   ];
   const content = (
     <>
-      <Text variant="bodyStrong">{label}</Text>
+      {icon ? <Icon icon={icon} size={20} color="textMuted" /> : null}
+      <Text variant="bodyStrong" style={styles.label} numberOfLines={1}>
+        {label}
+      </Text>
       <View style={styles.right}>
+        {valueIcon ? <Icon icon={valueIcon} size={16} color="textMuted" /> : null}
         {value ? <Text color="textMuted">{value}</Text> : null}
         {right}
-        {onPress && !right ? <Text color="textFaint">›</Text> : null}
+        {onPress && !right ? <Icon icon={ChevronRight} size={18} color="textFaint" /> : null}
       </View>
     </>
   );
@@ -41,7 +55,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.md,
   },
-  right: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  label: { flex: 1 },
+  right: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

@@ -1,12 +1,18 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import { Check, ChevronRight, Info } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { interestById } from '@/api/interests';
 import { useBook, useCancelBooking, useCancelEvent, useEvent, usePayBooking } from '@/api/queries';
 import { useMe } from '@/auth/auth-context';
+import { eventCover } from '@/components/event-card';
+import { HostLabel } from '@/components/host-label';
+import { INTEREST_ICONS } from '@/components/icons';
 import { ReportButton } from '@/components/report-button';
 import { Button } from '@/components/ui/button';
+import { Cover } from '@/components/ui/cover';
+import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { EmptyView, ErrorView, LoadingView } from '@/components/ui/state-view';
 import { Text } from '@/components/ui/text';
@@ -54,10 +60,14 @@ export default function EventScreen() {
 
   return wrap(
     <View style={styles.body}>
+      <Cover uri={eventCover(event, 1200)} fallbackIcon={INTEREST_ICONS[event.interestId]} style={styles.hero} iconSize={56} />
       {interest ? (
-        <Text variant="caption" color="textMuted">
-          {interest.emoji} {interest.name[lang]}
-        </Text>
+        <View style={styles.meta}>
+          <Icon icon={INTEREST_ICONS[event.interestId]} size={15} color="textMuted" />
+          <Text variant="label" color="textMuted" style={styles.upper}>
+            {interest.name[lang]}
+          </Text>
+        </View>
       ) : null}
       <Text variant="h2">{event.title}</Text>
 
@@ -65,12 +75,10 @@ export default function EventScreen() {
         <Text variant="caption" color="textMuted">
           {t.event.host}
         </Text>
-        <Text variant="bodyStrong" style={{ flex: 1 }} numberOfLines={1}>
-          {event.host.type === 'community' ? '👥 ' : '🏢 '}
-          {event.host.name}
-          {event.host.verified ? `  ✓ ${t.common.verified}` : ''}
-        </Text>
-        <Text color="textFaint">›</Text>
+        <View style={{ flex: 1 }}>
+          <HostLabel host={event.host} variant="bodyStrong" color="text" />
+        </View>
+        <Icon icon={ChevronRight} size={18} color="textFaint" />
       </Pressable>
 
       {event.description ? <Text color="textMuted">{event.description}</Text> : null}
@@ -98,7 +106,8 @@ export default function EventScreen() {
       ) : booking?.status === 'confirmed' ? (
         <>
           <View style={[styles.banner, { backgroundColor: colors.accentSoft }]}>
-            <Text variant="bodyStrong">✓ {t.event.booked}</Text>
+            <Icon icon={Check} size={18} strokeWidth={3} />
+            <Text variant="bodyStrong">{t.event.booked}</Text>
           </View>
           <Button title={t.event.cancelBooking} variant="ghost" loading={cancelBooking.isPending} onPress={() => cancelBooking.mutate(booking.id)} />
         </>
@@ -106,9 +115,12 @@ export default function EventScreen() {
         <>
           {/* TODO: реальная оплата — создание платежа Kaspi на бэкенде и подтверждение по вебхуку */}
           <Button title={`${t.event.pay} · ${formatKzt(event.priceKzt)}`} loading={pay.isPending} onPress={() => pay.mutate(booking.id)} />
-          <Text variant="caption" color="textMuted" style={styles.center}>
-            {t.event.payHint}
-          </Text>
+          <View style={styles.hint}>
+            <Icon icon={Info} size={14} color="textMuted" />
+            <Text variant="caption" color="textMuted">
+              {t.event.payHint}
+            </Text>
+          </View>
           <Button title={t.event.cancelBooking} variant="ghost" loading={cancelBooking.isPending} onPress={() => cancelBooking.mutate(booking.id)} />
         </>
       ) : (
@@ -150,13 +162,17 @@ function wrap(children: React.ReactNode) {
 }
 
 const styles = StyleSheet.create({
-  body: { gap: spacing.lg, paddingTop: spacing.lg },
+  body: { gap: spacing.lg },
+  hero: { height: 240, marginHorizontal: -spacing.lg, marginBottom: spacing.xs },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  upper: { textTransform: 'uppercase' },
+  hint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   host: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: radius.md },
   table: { borderRadius: radius.lg, borderWidth: 1 },
   row: { flexDirection: 'row', padding: spacing.lg, gap: spacing.lg },
   key: { width: 96 },
   value: { flex: 1 },
-  banner: { padding: spacing.lg, borderRadius: radius.md, alignItems: 'center' },
+  banner: { padding: spacing.lg, borderRadius: radius.md, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.sm },
   center: { textAlign: 'center', alignItems: 'center' },
   link: { textDecorationLine: 'underline' },
 });

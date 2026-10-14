@@ -8,7 +8,7 @@ import type { Booking, Community, EventItem, Organization, User } from './types'
 // чтобы UI можно было разрабатывать и показывать без сервера.
 // Код подтверждения в моке всегда 1111.
 
-const STORAGE_KEY = 'lifestyle.mockdb.v1';
+const STORAGE_KEY = 'lifestyle.mockdb.v2';
 const MOCK_OTP = '1111';
 const TOKEN_PREFIX = 'mock-token:';
 const RESEED_AFTER_MS = 3 * 86_400_000;
@@ -54,7 +54,7 @@ async function currentUser(db: Db): Promise<User> {
   return user;
 }
 
-// ── Проекции «таблиц» в DTO ──────────────────────────────────
+// Проекции «таблиц» в DTO
 function activeBookings(db: Db, eventId: string) {
   return db.bookings.filter((b) => b.eventId === eventId && b.status !== 'cancelled');
 }

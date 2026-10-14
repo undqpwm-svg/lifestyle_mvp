@@ -3,11 +3,12 @@ import { Pressable, StyleSheet } from 'react-native';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
+import { Icon, type LucideIcon } from './icon';
 import { Text } from './text';
 
-type Props = { label: string; active?: boolean; onPress?: () => void };
+type Props = { label: string; icon?: LucideIcon; active?: boolean; onPress?: () => void };
 
-export function Chip({ label, active, onPress }: Props) {
+export function Chip({ label, icon, active, onPress }: Props) {
   const { colors } = useTheme();
   return (
     <Pressable
@@ -22,6 +23,7 @@ export function Chip({ label, active, onPress }: Props) {
           opacity: pressed ? 0.8 : 1,
         },
       ]}>
+      {icon ? <Icon icon={icon} size={16} color={active ? 'onInverse' : 'text'} /> : null}
       <Text variant="caption" color={active ? 'onInverse' : 'text'}>
         {label}
       </Text>
@@ -31,6 +33,9 @@ export function Chip({ label, active, onPress }: Props) {
 
 const styles = StyleSheet.create({
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
