@@ -14,6 +14,11 @@
 |---|---|---|---|
 | ![](docs/screenshots/org.png) | ![](docs/screenshots/event-new.png) | ![](docs/screenshots/profile.png) | ![](docs/screenshots/community-dark.png) |
 
+## Веб-демо
+
+https://undqpwm-svg.github.io/lifestyle_mvp/ — веб-версия для показа (тестовые данные, код входа 1111).
+Обновить: `npm run deploy:web` — собирает сборку и публикует в ветку `gh-pages`.
+
 ## Запуск
 
 ```bash
