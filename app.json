@@ -41,7 +41,21 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "LIFESTYLE использует микрофон, чтобы записывать голосовые сообщения в чатах сообществ."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "LIFESTYLE открывает галерею, чтобы вы могли отправлять фото в чаты сообществ.",
+          "cameraPermission": "LIFESTYLE использует камеру, чтобы вы могли снять и отправить фото в чат.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -105,7 +105,8 @@ function RootNavigator() {
           <Stack.Screen name="create" options={{ presentation: 'modal', title: t.create.title }} />
           <Stack.Screen name="event/[id]" options={{ title: t.event.title }} />
           <Stack.Screen name="event/new" options={{ title: t.eventForm.title }} />
-          <Stack.Screen name="community/[id]" options={{ title: t.community.title }} />
+          <Stack.Screen name="community/[id]/index" options={{ title: t.community.title }} />
+          <Stack.Screen name="community/[id]/chat" options={{ headerShown: false }} />
           <Stack.Screen name="community/new" options={{ title: t.communityForm.title }} />
           <Stack.Screen name="org/[id]" options={{ title: t.org.title }} />
           <Stack.Screen name="org/new" options={{ title: t.orgForm.title }} />

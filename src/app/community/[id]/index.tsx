@@ -1,7 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { MapPin, Plus, Send, Star, Users } from 'lucide-react-native';
-import { Linking, StyleSheet, View } from 'react-native';
+import { MapPin, MessageCircle, Plus, Star, Users } from 'lucide-react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { interestById } from '@/api/interests';
 import { useCommunity, useCreatePost, useEvents, useJoinCommunity, usePosts } from '@/api/queries';
@@ -69,7 +69,7 @@ export default function CommunityScreen() {
         <Text color="textMuted">{c.description}</Text>
       </View>
 
-      <MembershipActions id={c.id} role={c.myRole} telegramUrl={c.telegramUrl} />
+      <MembershipActions id={c.id} role={c.myRole} />
 
       {canManage ? (
         <Button
@@ -91,7 +91,7 @@ export default function CommunityScreen() {
         ]}
       />
       <View style={styles.tabBody}>
-        {tab === 'events' ? <CommunityEvents id={c.id} cityId={c.cityId} /> : <CommunityFeed id={c.id} isMember={!!c.myRole} />}
+        {tab === 'events' ? <CommunityEvents id={c.id} cityId={c.cityId} /> : <CommunityFeed id={c.id} canPost={canManage} />}
       </View>
 
       {c.myRole !== 'owner' ? (
@@ -103,7 +103,7 @@ export default function CommunityScreen() {
   );
 }
 
-function MembershipActions({ id, role, telegramUrl }: { id: string; role: string | null; telegramUrl?: string }) {
+function MembershipActions({ id, role }: { id: string; role: string | null }) {
   const { t } = useAppSettings();
   const join = useJoinCommunity();
   return (
@@ -119,7 +119,13 @@ function MembershipActions({ id, role, telegramUrl }: { id: string; role: string
           onPress={() => join.mutate({ id, join: !role })}
         />
       )}
-      {telegramUrl ? <Button title={t.community.chat} icon={Send} variant="dark" style={styles.chatBtn} onPress={() => Linking.openURL(telegramUrl)} /> : null}
+      <Button
+        title={t.community.chat}
+        icon={MessageCircle}
+        variant="dark"
+        style={styles.chatBtn}
+        onPress={() => router.push({ pathname: '/community/[id]/chat', params: { id } })}
+      />
       {join.error ? <Text variant="caption" color="danger">{errorMessage(join.error, t)}</Text> : null}
     </View>
   );
@@ -139,7 +145,8 @@ function CommunityEvents({ id, cityId }: { id: string; cityId: Parameters<typeof
   );
 }
 
-function CommunityFeed({ id, isMember }: { id: string; isMember: boolean }) {
+// Объявления пишут владелец и модераторы; общение участников — в чате.
+function CommunityFeed({ id, canPost }: { id: string; canPost: boolean }) {
   const { t } = useAppSettings();
   const posts = usePosts(id);
   const create = useCreatePost(id);
@@ -147,7 +154,7 @@ function CommunityFeed({ id, isMember }: { id: string; isMember: boolean }) {
 
   return (
     <View style={{ gap: spacing.md }}>
-      {isMember ? (
+      {canPost ? (
         <View style={{ gap: spacing.sm }}>
           <TextField placeholder={t.community.postPlaceholder} value={text} onChangeText={setText} multiline maxLength={2000} />
           <Button
@@ -157,11 +164,7 @@ function CommunityFeed({ id, isMember }: { id: string; isMember: boolean }) {
             onPress={() => create.mutate(text, { onSuccess: () => setText('') })}
           />
         </View>
-      ) : (
-        <Text variant="caption" color="textMuted" style={styles.center}>
-          {t.community.joinToPost}
-        </Text>
-      )}
+      ) : null}
       {posts.isPending ? (
         <LoadingView />
       ) : !posts.data?.length ? (

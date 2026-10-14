@@ -24,9 +24,7 @@ export default function NewCommunityScreen() {
   const [description, setDescription] = useState('');
   const [cityId, setCityId] = useState<CityId>(feedCity ?? me.cityId);
   const [interests, setInterests] = useState<InterestId[]>([]);
-  const [telegramUrl, setTelegramUrl] = useState('');
-  const tgValid = !telegramUrl || /^https:\/\/t\.me\/[\w+/-]+$/.test(telegramUrl.trim());
-  const valid = name.trim().length >= 3 && interests.length > 0 && tgValid;
+  const valid = name.trim().length >= 3 && interests.length > 0;
 
   return (
     <Screen edges={['bottom']}>
@@ -41,15 +39,6 @@ export default function NewCommunityScreen() {
           <Text variant="caption" color="textMuted">{t.communityForm.interests}</Text>
           <InterestPicker multiple value={interests} onChange={setInterests} />
         </View>
-        <TextField
-          label={t.communityForm.telegram}
-          placeholder="https://t.me/…"
-          value={telegramUrl}
-          onChangeText={setTelegramUrl}
-          autoCapitalize="none"
-          keyboardType="url"
-          error={tgValid ? null : 'https://t.me/…'}
-        />
         {create.error ? <Text variant="caption" color="danger">{errorMessage(create.error, t)}</Text> : null}
         <Button
           title={t.communityForm.create}
@@ -57,7 +46,7 @@ export default function NewCommunityScreen() {
           loading={create.isPending}
           onPress={() =>
             create.mutate(
-              { name, description, cityId, interests, telegramUrl: telegramUrl.trim() || undefined },
+              { name, description, cityId, interests },
               { onSuccess: (c) => router.replace({ pathname: '/community/[id]', params: { id: c.id } }) },
             )
           }

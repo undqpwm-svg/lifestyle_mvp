@@ -2,7 +2,7 @@ import type { CityId } from '@/config/cities';
 
 import { pexels } from '@/lib/media';
 
-import type { Booking, CommunityRole, InterestId, Organization, Post, User } from './types';
+import type { Booking, ChatMessage, CommunityRole, InterestId, Organization, Post, User } from './types';
 
 // Начальные данные тестового сервера. Даты считаются от текущего момента.
 
@@ -33,7 +33,6 @@ export type DbCommunity = {
   cityId: CityId;
   interests: InterestId[];
   ownerId: string;
-  telegramUrl?: string;
   coverUrl?: string;
   seedMembers: number;
   createdAt: string;
@@ -50,6 +49,7 @@ export type Db = {
   events: DbEvent[];
   bookings: Booking[];
   posts: Post[];
+  messages: ChatMessage[];
   reports: { target: string; targetId: string; reason: string; userId: string; createdAt: string }[];
 };
 
@@ -96,8 +96,7 @@ export function createSeed(): Db {
   const communities: DbCommunity[] = [
     {
       id: 'c-volley', coverUrl: pexels(6203541), name: 'Волейбол Астана', cityId: 'astana', interests: ['volleyball'], ownerId: 'u-aman',
-      description: 'Играем 3 раза в неделю, уровень от новичка до любителя. Новичкам рады!',
-      telegramUrl: 'https://t.me/lifestyle_astana', seedMembers: 214, createdAt: ago(400),
+      description: 'Играем 3 раза в неделю, уровень от новичка до любителя. Новичкам рады!', seedMembers: 214, createdAt: ago(400),
     },
     {
       id: 'c-boardgames', coverUrl: pexels(8111356), name: 'Настолки по пятницам', cityId: 'astana', interests: ['boardgames', 'mafia'], ownerId: 'u-erlan',
@@ -116,7 +115,13 @@ export function createSeed(): Db {
     },
   ];
 
-  const members: DbMember[] = communities.map((c) => ({ communityId: c.id, userId: c.ownerId, role: 'owner' }));
+  const members: DbMember[] = [
+    ...communities.map((c) => ({ communityId: c.id, userId: c.ownerId, role: 'owner' as const })),
+    { communityId: 'c-volley', userId: 'u-dana', role: 'member' },
+    { communityId: 'c-volley', userId: 'u-erlan', role: 'moderator' },
+    { communityId: 'c-boardgames', userId: 'u-aman', role: 'member' },
+    { communityId: 'c-run', userId: 'u-aman', role: 'member' },
+  ];
 
   const events: DbEvent[] = [
     {
@@ -176,7 +181,7 @@ export function createSeed(): Db {
     { id: 'p1', communityId: 'c-volley', authorId: 'u-aman', authorName: 'Аман Б.', createdAt: ago(5),
       text: 'Сегодня играем в 19:00, есть ещё 4 места. Кто новенький — приходите к 18:45, разомнёмся вместе.' },
     { id: 'p2', communityId: 'c-volley', authorId: 'u-aman', authorName: 'Аман Б.', createdAt: ago(48),
-      text: 'Спасибо всем за субботу! Фото в чате в Telegram.' },
+      text: 'Спасибо всем за субботу! Фото выложили в чат.' },
     { id: 'p3', communityId: 'c-boardgames', authorId: 'u-erlan', authorName: 'Ерлан М.', createdAt: ago(20),
       text: 'В пятницу привезу «Root» — кто хочет разобраться в правилах, приходите пораньше.' },
     { id: 'p4', communityId: 'c-run', authorId: 'u-dana', authorName: 'Дана К.', createdAt: ago(12),
@@ -185,5 +190,31 @@ export function createSeed(): Db {
       text: 'Ищем спикеров на следующий завтрак: тема — мобильная разработка. Пишите в комментариях в чате.' },
   ];
 
-  return { version: 1, users, organizations, communities, members, events, bookings: [], posts, reports: [] };
+  // Переписка в чатах: имена авторов денормализованы, как и в ответе API.
+  const msg = (id: string, communityId: string, authorId: string, hoursAgo: number, text: string, attachments: ChatMessage['attachments'] = []): ChatMessage => ({
+    id,
+    communityId,
+    authorId,
+    authorName: users.find((u) => u.id === authorId)!.name,
+    text,
+    attachments,
+    createdAt: ago(hoursAgo),
+  });
+  const messages: ChatMessage[] = [
+    msg('m1', 'c-volley', 'u-aman', 26, 'Всем привет! Вчера было огонь, спасибо, что пришли.'),
+    msg('m2', 'c-volley', 'u-dana', 25.8, 'Фото с игры', [{ kind: 'image', url: pexels(6203541, 900), width: 900, height: 600 }]),
+    msg('m3', 'c-volley', 'u-erlan', 25.5, 'Класс! В следующий раз возьму второй мяч, этот уже лысый'),
+    msg('m4', 'c-volley', 'u-aman', 3, 'Сегодня в 19:00 Дворец спорта. Кто будет — отпишитесь, чтобы я понимал, сколько команд.'),
+    msg('m5', 'c-volley', 'u-dana', 2.6, 'Буду +1, возьму подругу'),
+    msg('m6', 'c-volley', 'u-erlan', 2.2, 'Я тоже, только опоздаю минут на 10'),
+    msg('m7', 'c-boardgames', 'u-erlan', 30, 'В пятницу играем в Root. Правила скину сюда, прочитайте заранее, там много нюансов.'),
+    msg('m8', 'c-boardgames', 'u-aman', 28, 'А Каркассон будет? Хочу показать его друзьям'),
+    msg('m9', 'c-boardgames', 'u-erlan', 27.5, 'Будет, возьму базу и дополнение с рекой'),
+    msg('m10', 'c-run', 'u-dana', 14, 'Завтра 7 км, сбор у моста «Атырау» в 6:50. Погода +8, берите ветровки.'),
+    msg('m11', 'c-run', 'u-aman', 13, 'Я в деле. Темп 6:00 держим?'),
+    msg('m12', 'c-run', 'u-dana', 12.5, 'Да, первые два км разминочно'),
+    msg('m13', 'c-it', 'u-aliya', 20, 'Ищем спикеров на следующий завтрак. Тема — мобильная разработка, 15 минут.'),
+  ];
+
+  return { version: 1, users, organizations, communities, members, events, bookings: [], posts, messages, reports: [] };
 }

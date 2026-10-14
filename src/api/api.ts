@@ -2,6 +2,7 @@ import type {
   AuthResult,
   Booking,
   BookingWithEvent,
+  ChatMessage,
   Community,
   CommunityInput,
   EventFilter,
@@ -9,6 +10,8 @@ import type {
   EventItem,
   ID,
   InterestId,
+  LocalMedia,
+  NewMessage,
   Organization,
   OrganizationInput,
   Post,
@@ -54,6 +57,14 @@ export interface Api {
   leaveCommunity(id: ID): Promise<void>;
   listPosts(communityId: ID): Promise<Post[]>;
   createPost(communityId: ID, text: string): Promise<Post>;
+
+  // Чат сообщества
+  /** Последние сообщения, новые первыми (для перевёрнутого списка). */
+  listMessages(communityId: ID): Promise<ChatMessage[]>;
+  sendMessage(communityId: ID, message: NewMessage): Promise<ChatMessage>;
+  deleteMessage(messageId: ID): Promise<void>;
+  /** Загрузка фото/голосового в хранилище. Возвращает публичный URL файла. */
+  uploadMedia(file: LocalMedia): Promise<{ url: string }>;
 
   // Модерация
   report(target: ReportTarget, targetId: ID, reason: ReportReason): Promise<void>;

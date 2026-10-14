@@ -75,6 +75,22 @@ export function createHttpApi(baseUrl: string): Api {
     listPosts: (cid) => request('GET', `/v1/communities/${id(cid)}/posts`),
     createPost: (cid, text) => request('POST', `/v1/communities/${id(cid)}/posts`, { text }),
 
+    listMessages: (cid) => request('GET', `/v1/communities/${id(cid)}/messages`),
+    sendMessage: (cid, message) => request('POST', `/v1/communities/${id(cid)}/messages`, message),
+    deleteMessage: (mid) => request('DELETE', `/v1/messages/${id(mid)}`),
+    // Двухшаговая загрузка: сервер выдаёт подписанный URL хранилища, файл идёт туда напрямую,
+    // минуя API — так тяжёлые фото и аудио не нагружают бэкенд.
+    uploadMedia: async (file) => {
+      const { uploadUrl, url } = await request<{ uploadUrl: string; url: string }>('POST', '/v1/media', {
+        kind: file.kind,
+        mimeType: file.mimeType,
+      });
+      const blob = await (await fetch(file.uri)).blob();
+      const res = await fetch(uploadUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': file.mimeType ?? blob.type } });
+      if (!res.ok) throw new ApiError('server', `upload ${res.status}`, res.status);
+      return { url };
+    },
+
     report: (target, targetId, reason) => request('POST', '/v1/reports', { target, targetId, reason }),
   };
 }

@@ -8,7 +8,7 @@ import type { Booking, Community, EventItem, Organization, User } from './types'
 // чтобы UI можно было разрабатывать и показывать без сервера.
 // Код подтверждения в моке всегда 1111.
 
-const STORAGE_KEY = 'lifestyle.mockdb.v2';
+const STORAGE_KEY = 'lifestyle.mockdb.v3';
 const MOCK_OTP = '1111';
 const TOKEN_PREFIX = 'mock-token:';
 const RESEED_AFTER_MS = 3 * 86_400_000;
@@ -37,9 +37,14 @@ function loadDb() {
   return dbPromise;
 }
 
+// Медиа, снятые на устройстве, в моке не загружаются на сервер: на вебе это blob:/data:-ссылки.
+// В localStorage их не кладём (лимит ~5 МБ) — после перезагрузки такие вложения становятся «недоступны».
+const isLocalMedia = (url: string) => url.startsWith('blob:') || url.startsWith('data:');
+
 async function save() {
   const db = await loadDb();
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(db)).catch(() => {});
+  const json = JSON.stringify(db, (key, value) => (key === 'url' && typeof value === 'string' && isLocalMedia(value) ? '' : value));
+  await AsyncStorage.setItem(STORAGE_KEY, json).catch(() => {});
 }
 
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
@@ -85,6 +90,35 @@ function toCommunity(db: Db, c: DbCommunity, userId: string | null): Community {
     membersCount: seedMembers + members.filter((m) => m.userId !== c.ownerId).length,
     myRole: members.find((m) => m.userId === userId)?.role ?? null,
   };
+}
+
+function roleIn(db: Db, communityId: string, userId: string) {
+  return db.members.find((m) => m.communityId === communityId && m.userId === userId)?.role ?? null;
+}
+
+// Демо-оживление чата: на первое сообщение пользователя в сообществе отвечает организатор.
+const WELCOME_REPLIES = [
+  'Привет! Рады тебе в чате. Ближайшие встречи — во вкладке «Встречи» сообщества.',
+  'Добро пожаловать! Если есть вопросы по встречам — пиши сюда.',
+];
+
+function scheduleWelcome(db: Db, communityId: string, userId: string) {
+  const c = db.communities.find((x) => x.id === communityId);
+  if (!c || c.ownerId === userId) return;
+  const owner = db.users.find((u) => u.id === c.ownerId);
+  if (!owner) return;
+  setTimeout(() => {
+    db.messages.push({
+      id: uid('m'),
+      communityId,
+      authorId: owner.id,
+      authorName: owner.name,
+      text: WELCOME_REPLIES[communityId.length % WELCOME_REPLIES.length],
+      attachments: [],
+      createdAt: now(),
+    });
+    save();
+  }, 2500);
 }
 
 function assert(cond: unknown, code: ConstructorParameters<typeof ApiError>[0], msg?: string): asserts cond {
@@ -322,12 +356,10 @@ export const mockApi: Api = {
     const me = await currentUser(db);
     assert(input.name.trim().length >= 3, 'validation', 'name');
     assert(input.interests.length > 0, 'validation', 'interests');
-    assert(!input.telegramUrl || /^https:\/\/t\.me\/[\w+/-]+$/.test(input.telegramUrl), 'validation', 'telegramUrl');
     const c: DbCommunity = {
       ...input,
       name: input.name.trim(),
       description: input.description.trim(),
-      telegramUrl: input.telegramUrl || undefined,
       id: uid('c'),
       ownerId: me.id,
       seedMembers: 1,
@@ -373,13 +405,60 @@ export const mockApi: Api = {
     await delay();
     const db = await loadDb();
     const me = await currentUser(db);
-    assert(db.members.some((m) => m.communityId === communityId && m.userId === me.id), 'forbidden');
+    const role = roleIn(db, communityId, me.id);
+    assert(role === 'owner' || role === 'moderator', 'forbidden');
     const body = text.trim();
     assert(body.length > 0 && body.length <= 2000, 'validation', 'text');
     const post = { id: uid('p'), communityId, authorId: me.id, authorName: me.name, text: body, createdAt: now() };
     db.posts.push(post);
     await save();
     return post;
+  },
+
+  async listMessages(communityId) {
+    await delay(150);
+    const db = await loadDb();
+    const me = await currentUser(db);
+    assert(roleIn(db, communityId, me.id), 'forbidden');
+    return db.messages
+      .filter((m) => m.communityId === communityId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 200);
+  },
+
+  async sendMessage(communityId, message) {
+    await delay(200);
+    const db = await loadDb();
+    const me = await currentUser(db);
+    assert(roleIn(db, communityId, me.id), 'forbidden');
+    const text = message.text.trim();
+    assert(text.length > 0 || message.attachments.length > 0, 'validation', 'empty');
+    assert(text.length <= 4000 && message.attachments.length <= 10, 'validation', 'too_long');
+    const isFirst = !db.messages.some((m) => m.communityId === communityId && m.authorId === me.id);
+    const msg = { id: uid('m'), communityId, authorId: me.id, authorName: me.name, text, attachments: message.attachments, createdAt: now() };
+    db.messages.push(msg);
+    await save();
+    if (isFirst) scheduleWelcome(db, communityId, me.id);
+    return msg;
+  },
+
+  async deleteMessage(messageId) {
+    await delay();
+    const db = await loadDb();
+    const me = await currentUser(db);
+    const m = db.messages.find((x) => x.id === messageId);
+    assert(m, 'not_found');
+    const role = roleIn(db, m.communityId, me.id);
+    // Удалить может автор, а модератор и владелец — любое сообщение в своём сообществе.
+    assert(m.authorId === me.id || role === 'owner' || role === 'moderator', 'forbidden');
+    db.messages = db.messages.filter((x) => x !== m);
+    await save();
+  },
+
+  async uploadMedia(file) {
+    await delay(150);
+    // На бэкенде — подписанный URL объектного хранилища; в моке файл остаётся на устройстве.
+    return { url: file.uri };
   },
 
   async report(target, targetId, reason) {

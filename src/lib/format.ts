@@ -38,3 +38,24 @@ export function formatRelative(iso: string, lang: Lang): string {
   if (sec < 7 * 86_400) return `${Math.floor(sec / 86_400)} ${w.d} ${w.suffix}`;
   return new Date(iso).toLocaleDateString(intlLocale[lang], { day: 'numeric', month: 'short' });
 }
+
+/** «19:05» */
+export function formatTime(iso: string, lang: Lang): string {
+  return new Date(iso).toLocaleTimeString(intlLocale[lang], { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+/** Разделитель дня в чате: «Сегодня» / «Вчера» / «12 октября». */
+export function formatDay(iso: string, lang: Lang, t: Dictionary): string {
+  const diff = Math.round((startOfDay(new Date()) - startOfDay(new Date(iso))) / 86_400_000);
+  if (diff === 0) return t.events.today;
+  if (diff === 1) return t.events.yesterday;
+  return new Date(iso).toLocaleDateString(intlLocale[lang], { day: 'numeric', month: 'long' });
+}
+
+export const isSameDay = (a: string, b: string) => startOfDay(new Date(a)) === startOfDay(new Date(b));
+
+/** 65000 → «1:05» */
+export function formatDuration(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}

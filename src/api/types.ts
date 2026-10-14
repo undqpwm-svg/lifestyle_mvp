@@ -66,16 +66,15 @@ export type Community = {
   interests: InterestId[];
   ownerId: ID;
   membersCount: number;
-  /** Ссылка на чат в Telegram — переписка в MVP живёт там */
-  telegramUrl?: string;
   coverUrl?: string;
   /** Роль текущего пользователя; null — не участник */
   myRole: CommunityRole | null;
   createdAt: ISODate;
 };
 
-export type CommunityInput = Pick<Community, 'name' | 'description' | 'cityId' | 'interests' | 'telegramUrl'>;
+export type CommunityInput = Pick<Community, 'name' | 'description' | 'cityId' | 'interests'>;
 
+/** Объявление в сообществе — пишут только владелец и модераторы. */
 export type Post = {
   id: ID;
   communityId: ID;
@@ -84,6 +83,28 @@ export type Post = {
   text: string;
   createdAt: ISODate;
 };
+
+// Чат сообщества (как группа в мессенджере: только для участников)
+export type ImageAttachment = { kind: 'image'; url: string; width: number; height: number };
+export type VoiceAttachment = { kind: 'voice'; url: string; durationMs: number };
+export type Attachment = ImageAttachment | VoiceAttachment;
+
+export type ChatMessage = {
+  id: ID;
+  communityId: ID;
+  authorId: ID;
+  authorName: string;
+  text: string;
+  attachments: Attachment[];
+  createdAt: ISODate;
+  /** Только на клиенте: сообщение ещё отправляется */
+  pending?: boolean;
+};
+
+export type NewMessage = { text: string; attachments: Attachment[] };
+
+/** Локальный файл с устройства, который нужно загрузить в хранилище перед отправкой. */
+export type LocalMedia = { uri: string; kind: 'image' | 'voice'; mimeType?: string };
 
 // Встреча
 export type HostType = 'organization' | 'community';
@@ -146,7 +167,7 @@ export type Booking = {
 export type BookingWithEvent = Booking & { event: EventItem };
 
 // Модерация
-export type ReportTarget = 'event' | 'community' | 'post' | 'organization' | 'user';
+export type ReportTarget = 'event' | 'community' | 'post' | 'message' | 'organization' | 'user';
 export type ReportReason = 'spam' | 'fraud' | 'offensive' | 'other';
 
 // Авторизация
