@@ -3,9 +3,16 @@
 Нативный клиент сервиса городских встреч [lifestyle.ink](https://lifestyle.ink) для iOS и Android.
 Стек: **Expo SDK 57 · React Native 0.86 · TypeScript · Expo Router**.
 
-| Лента | Встреча | Профиль | Тёмная тема |
+Соцсеть живых встреч: пользователи записываются на встречи и вступают в сообщества,
+организации (кафе, клубы, спортцентры) и сообщества публикуют встречи. Архитектура и бизнес-правила — [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+| Вход | Лента | Встреча | Сообщество |
 |---|---|---|---|
-| ![](docs/screenshots/light-feed.png) | ![](docs/screenshots/light-event.png) | ![](docs/screenshots/light-profile.png) | ![](docs/screenshots/dark-feed.png) |
+| ![](docs/screenshots/welcome.png) | ![](docs/screenshots/feed.png) | ![](docs/screenshots/event.png) | ![](docs/screenshots/community.png) |
+
+| Организация | Новая встреча | Профиль | Тёмная тема |
+|---|---|---|---|
+| ![](docs/screenshots/org.png) | ![](docs/screenshots/event-new.png) | ![](docs/screenshots/profile.png) | ![](docs/screenshots/community-dark.png) |
 
 ## Запуск
 
@@ -15,28 +22,38 @@ npx expo start          # QR → Expo Go на телефоне; i / a — сим
 npx expo start --web    # превью в браузере
 ```
 
+Без `EXPO_PUBLIC_API_URL` приложение работает на тестовом сервере внутри устройства:
+вход по любому номеру `+7 7XX XXX XX XX`, **код — 1111**. Данные сохраняются между запусками.
+
 Проверки перед коммитом:
 
 ```bash
-npx tsc --noEmit
-npx expo lint
+npm run typecheck
+npm run lint
 ```
 
 ## Структура
 
 ```
 src/
-  app/                  # экраны (Expo Router, файловая маршрутизация)
-    _layout.tsx         # шрифты, splash, провайдеры, корневой Stack
-    (tabs)/             # таббар: Встречи · Мои записи · Профиль
-    event/[id].tsx      # карточка встречи + запись через бота
-  api/                  # контракт данных, HTTP-клиент, моки, useQuery
-  components/           # доменные компоненты + ui/ (Text, Button, Chip, Screen)
-  config/               # города, ссылки, deep-link в бота
-  i18n/                 # RU / KZ / EN (структура задаётся ru.ts)
-  lib/                  # форматирование ₸ и дат
-  state/                # настройки пользователя (AsyncStorage)
-  theme/                # дизайн-токены и useTheme()
+  app/                      # экраны (Expo Router)
+    _layout.tsx             # провайдеры, шрифты, Stack.Protected: гость / онбординг / приложение
+    (auth)/                 # приветствие, телефон, SMS-код
+    onboarding.tsx          # имя, город, интересы
+    (tabs)/                 # Встречи · Сообщества · Записи · Профиль
+    create.tsx              # «+»: встреча / сообщество / организация
+    event/[id].tsx, new.tsx
+    community/[id].tsx, new.tsx
+    org/[id].tsx, new.tsx
+  api/
+    types.ts                # доменная модель (контракт с бэкендом)
+    api.ts                  # интерфейс Api, ApiError, токен
+    http-api.ts             # реализация поверх REST
+    mock-api.ts, mock-seed.ts  # тестовый сервер с бизнес-правилами
+    queries.ts              # хуки TanStack Query и инвалидация кэша
+  auth/                     # сессия, OTP, SecureStore
+  components/               # доменные компоненты + ui/
+  config/  i18n/  lib/  state/  theme/
 ```
 
 ## Дизайн-система
@@ -54,18 +71,6 @@ src/
 Шрифты: **Montserrat** (заголовки, замена коммерческого Intro) и **Open Sans** (текст). Оба покрывают казахский алфавит.
 Скругления: кнопки и чипы — «пилюли», карточки — 22.
 
-## Интеграция с ботом
-
-- Запись на встречу (MVP) — переход в `@LIFESTYLEK_BOT` с `?start=ev_<eventId>`. Бот должен разбирать payload в `/start`.
-- Вход — `?start=app_login` (заглушка до Telegram Login на бэкенде).
-- Бэкенд подключается через `EXPO_PUBLIC_API_URL` (см. `.env.example`). Ожидаемые эндпоинты:
-  `GET /v1/categories`, `GET /v1/events?city=`, `GET /v1/events/:id` — формат в `src/api/types.ts`.
-
 ## Дорожная карта
 
-1. API бэкенда бота и отказ от моков.
-2. Авторизация: Telegram Login → JWT, профиль и записи с сервера.
-3. Оплата Kaspi (deep-link / Kaspi Pay API), статусы оплаты через вебхуки.
-4. Push-уведомления (expo-notifications): новые встречи, напоминание за 2 часа.
-5. Кабинет организатора: создание встречи, список участников, QR-чек-ин.
-6. Сборка и публикация через EAS (`eas build`, `eas submit`), OTA-обновления (`eas update`).
+См. раздел «Дальше» в [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

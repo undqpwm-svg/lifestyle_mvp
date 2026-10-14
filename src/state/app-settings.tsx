@@ -4,21 +4,20 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { DEFAULT_CITY, type CityId } from '@/config/cities';
 import { dictionaries, type Dictionary, type Lang } from '@/i18n';
 
-// Пользовательские настройки, переживающие перезапуск: язык, город, локальные заявки.
-// Заявки хранятся локально до появления бэкенда — потом источником станет API.
+// Настройки устройства, переживающие перезапуск: язык интерфейса и город, который смотрит пользователь.
+// Город в профиле — «домашний», здесь — текущий выбор в ленте (можно смотреть другой город).
 
 const STORAGE_KEY = 'lifestyle.settings.v1';
 
-type Persisted = { lang: Lang; cityId: CityId; bookedEventIds: string[] };
+type Persisted = { lang: Lang; cityId: CityId };
 
-const DEFAULTS: Persisted = { lang: 'ru', cityId: DEFAULT_CITY, bookedEventIds: [] };
+const DEFAULTS: Persisted = { lang: 'ru', cityId: DEFAULT_CITY };
 
 type AppSettings = Persisted & {
   ready: boolean;
   t: Dictionary;
   setLang: (lang: Lang) => void;
   setCity: (cityId: CityId) => void;
-  addBooking: (eventId: string) => void;
 };
 
 const Ctx = createContext<AppSettings | null>(null);
@@ -30,7 +29,10 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => {
-        if (raw) setState({ ...DEFAULTS, ...(JSON.parse(raw) as Partial<Persisted>) });
+        if (raw) {
+          const { lang, cityId } = JSON.parse(raw) as Partial<Persisted>;
+          setState({ lang: lang ?? DEFAULTS.lang, cityId: cityId ?? DEFAULTS.cityId });
+        }
       })
       .catch(() => {
         // Битые или недоступные данные — работаем на значениях по умолчанию.
@@ -53,10 +55,6 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       t: dictionaries[state.lang],
       setLang: (lang) => update((p) => ({ ...p, lang })),
       setCity: (cityId) => update((p) => ({ ...p, cityId })),
-      addBooking: (id) =>
-        update((p) =>
-          p.bookedEventIds.includes(id) ? p : { ...p, bookedEventIds: [...p.bookedEventIds, id] },
-        ),
     }),
     [state, ready, update],
   );

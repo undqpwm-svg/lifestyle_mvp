@@ -3,7 +3,7 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useAppSettings } from '@/state/app-settings';
 import { useTheme } from '@/theme/use-theme';
 
-// Нативный таббар: UITabBar на iOS (с Liquid Glass на iOS 26+), Material 3 на Android.
+// Нативный таббар: UITabBar на iOS (Liquid Glass на iOS 26+), Material 3 на Android.
 export default function AppTabs() {
   const { colors } = useTheme();
   const { t } = useAppSettings();
@@ -16,17 +16,16 @@ export default function AppTabs() {
       labelStyle={{ selected: { color: colors.text } }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>{t.tabs.events}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'calendar', selected: 'calendar' }} md="event" />
+        <NativeTabs.Trigger.Icon sf="calendar" md="event" />
       </NativeTabs.Trigger>
-
+      <NativeTabs.Trigger name="communities">
+        <NativeTabs.Trigger.Label>{t.tabs.communities}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'person.3', selected: 'person.3.fill' }} md="groups" />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="bookings">
         <NativeTabs.Trigger.Label>{t.tabs.bookings}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'ticket', selected: 'ticket.fill' }}
-          md="confirmation_number"
-        />
+        <NativeTabs.Trigger.Icon sf={{ default: 'ticket', selected: 'ticket.fill' }} md="confirmation_number" />
       </NativeTabs.Trigger>
-
       <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Label>{t.tabs.profile}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} md="person" />

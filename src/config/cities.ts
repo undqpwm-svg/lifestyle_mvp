@@ -5,20 +5,16 @@ export type CityId = 'astana' | 'almaty';
 export type City = {
   id: CityId;
   name: Record<Lang, string>;
-  // Канал сообщества города в Telegram (как на сайте).
-  community: string;
 };
 
 export const CITIES: City[] = [
   {
     id: 'astana',
     name: { ru: 'Астана', kz: 'Астана', en: 'Astana' },
-    community: 'https://t.me/lifestyle_astana',
   },
   {
     id: 'almaty',
     name: { ru: 'Алматы', kz: 'Алматы', en: 'Almaty' },
-    community: 'https://t.me/lifestyle_almaty',
   },
 ];
 

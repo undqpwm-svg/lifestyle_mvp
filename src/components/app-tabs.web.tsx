@@ -27,8 +27,11 @@ export default function AppTabs() {
           <TabTrigger name="index" href="/" asChild>
             <TabButton icon="📅" label={t.tabs.events} />
           </TabTrigger>
+          <TabTrigger name="communities" href="/communities" asChild>
+            <TabButton icon="👥" label={t.tabs.communities} />
+          </TabTrigger>
           <TabTrigger name="bookings" href="/bookings" asChild>
-            <TabButton icon="🎟" label={t.tabs.bookings} />
+            <TabButton icon="🎫" label={t.tabs.bookings} />
           </TabTrigger>
           <TabTrigger name="profile" href="/profile" asChild>
             <TabButton icon="👤" label={t.tabs.profile} />
@@ -52,15 +55,17 @@ function TabButton({ icon, label, isFocused, ...props }: TabTriggerSlotProps & {
   const { colors } = useTheme();
   return (
     <Pressable {...props} style={[styles.btn, isFocused && { backgroundColor: colors.accent }]}>
-      <Text variant="caption" color={isFocused ? 'onAccent' : 'onInverse'}>
-        {icon} {label}
+      <Text style={styles.icon}>{icon}</Text>
+      <Text variant="label" color={isFocused ? 'onAccent' : 'onInverse'} numberOfLines={1}>
+        {label}
       </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', bottom: spacing.lg, left: 0, right: 0, alignItems: 'center' },
-  bar: { flexDirection: 'row', padding: 6, borderRadius: radius.pill, gap: 4 },
-  btn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.pill },
+  wrap: { position: 'absolute', bottom: spacing.lg, left: spacing.md, right: spacing.md, alignItems: 'center' },
+  bar: { flexDirection: 'row', padding: 6, borderRadius: radius.pill, gap: 2, width: '100%', maxWidth: 480 },
+  btn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: radius.pill, gap: 2 },
+  icon: { fontSize: 16, lineHeight: 20 },
 });

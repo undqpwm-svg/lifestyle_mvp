@@ -1,75 +1,109 @@
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { interestById } from '@/api/interests';
+import { useMyCommunities, useMyOrganizations } from '@/api/queries';
+import { useAuth, useMe } from '@/auth/auth-context';
 import { CityPicker } from '@/components/city-picker';
 import { SettingsRow } from '@/components/settings-row';
+import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
+import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
 import { getCity } from '@/config/cities';
-import { botStartLink, LEGAL_LINKS, ORGANIZER_CONTACT } from '@/config/links';
+import { LEGAL_LINKS } from '@/config/links';
 import { LANGS } from '@/i18n';
+import { maskPhone } from '@/lib/phone';
 import { useAppSettings } from '@/state/app-settings';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
-  const { t, lang, setLang, cityId } = useAppSettings();
+  const me = useMe();
+  const { signOut } = useAuth();
+  const { t, lang, setLang } = useAppSettings();
+  const orgs = useMyOrganizations();
+  const communities = useMyCommunities();
   const open = (url: string) => WebBrowser.openBrowserAsync(url);
+  const group = [styles.group, { backgroundColor: colors.surface, borderColor: colors.line }];
+
+  const orgStatus = { pending: `⏳ ${t.org.pending}`, verified: `✓ ${t.common.verified}`, rejected: t.org.rejected };
 
   return (
-    <Screen>
-      <Text variant="h1" style={styles.title}>
-        {t.profile.title}
-      </Text>
-
-      {/* Hero-блок входа: тёмная секция, как блок «Для организаторов» на сайте */}
+    <Screen tabBarInset>
+      {/* Карточка пользователя — тёмная секция в стиле блока «Для организаторов» на сайте */}
       <View style={[styles.hero, { backgroundColor: colors.inverse }]}>
-        <Text variant="h3" color="onInverse">
-          LIFESTYLE
-        </Text>
-        <Text color="onInverse" style={{ opacity: 0.7 }}>
-          {t.profile.loginHint}
-        </Text>
-        {/* TODO: Telegram Login — подпись данных проверяет бэкенд, клиент получает JWT. */}
-        <Button title={t.profile.loginTelegram} onPress={() => Linking.openURL(botStartLink('app_login'))} />
+        <View style={styles.heroTop}>
+          <Avatar name={me.name} size={56} />
+          <View style={{ flex: 1 }}>
+            <Text variant="h2" color="onInverse">
+              {me.name}
+            </Text>
+            <Text variant="caption" color="onInverse" style={{ opacity: 0.6 }}>
+              {maskPhone(me.phone)} · {getCity(me.cityId).name[lang]}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.tags}>
+          {me.interests.map((id) => {
+            const i = interestById.get(id);
+            return i ? (
+              <View key={id} style={[styles.tag, { borderColor: 'rgba(255,255,255,0.2)' }]}>
+                <Text variant="caption" color="onInverse">
+                  {i.emoji} {i.name[lang]}
+                </Text>
+              </View>
+            ) : null;
+          })}
+        </View>
       </View>
 
-      <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+      <Text variant="h3" style={styles.groupTitle}>
+        {t.profile.myOrgs}
+      </Text>
+      <View style={group}>
+        {(orgs.data ?? []).map((o) => (
+          <SettingsRow
+            key={o.id}
+            label={o.name}
+            value={orgStatus[o.status]}
+            onPress={() => router.push({ pathname: '/org/[id]', params: { id: o.id } })}
+          />
+        ))}
+        <SettingsRow label={`＋ ${t.profile.addOrg}`} onPress={() => router.push('/org/new')} last />
+      </View>
+
+      <Text variant="h3" style={styles.groupTitle}>
+        {t.profile.myCommunities}
+      </Text>
+      <View style={group}>
+        {(communities.data ?? []).map((c) => (
+          <SettingsRow
+            key={c.id}
+            label={c.name}
+            value={c.myRole === 'owner' ? '★' : undefined}
+            onPress={() => router.push({ pathname: '/community/[id]', params: { id: c.id } })}
+          />
+        ))}
+        <SettingsRow label={`＋ ${t.communities.create}`} onPress={() => router.push('/community/new')} last />
+      </View>
+
+      <View style={[group, { marginTop: spacing.lg }]}>
         <SettingsRow label={t.profile.city} right={<CityPicker />} />
-        <SettingsRow
-          label={t.profile.language}
-          last
-          right={
-            <View style={[styles.segment, { backgroundColor: colors.surfaceAlt }]}>
-              {LANGS.map((l) => (
-                <Pressable
-                  key={l.id}
-                  onPress={() => setLang(l.id)}
-                  style={[styles.segBtn, lang === l.id && { backgroundColor: colors.inverse }]}>
-                  <Text variant="label" color={lang === l.id ? 'onInverse' : 'textMuted'}>
-                    {l.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          }
-        />
+        <SettingsRow label={t.profile.language} last right={<Segmented options={LANGS} value={lang} onChange={setLang} />} />
       </View>
 
-      <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-        <SettingsRow label={t.profile.community} onPress={() => Linking.openURL(getCity(cityId).community)} />
-        <SettingsRow label={t.profile.organizer} onPress={() => Linking.openURL(ORGANIZER_CONTACT)} last />
-      </View>
-
-      <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+      <View style={group}>
         <SettingsRow label={t.profile.offer} onPress={() => open(LEGAL_LINKS.offer)} />
         <SettingsRow label={t.profile.terms} onPress={() => open(LEGAL_LINKS.terms)} />
         <SettingsRow label={t.profile.privacy} onPress={() => open(LEGAL_LINKS.privacy)} last />
       </View>
 
+      <Button title={t.profile.signOut} variant="ghost" onPress={signOut} />
       <Text variant="caption" color="textFaint" style={styles.version}>
         {t.profile.version} {Constants.expoConfig?.version ?? '—'}
       </Text>
@@ -78,10 +112,11 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { paddingTop: spacing.lg, paddingBottom: spacing.xl },
-  hero: { borderRadius: radius.lg, padding: spacing.xl, gap: spacing.md, marginBottom: spacing.lg },
+  hero: { borderRadius: radius.lg, padding: spacing.xl, gap: spacing.lg, marginTop: spacing.lg, marginBottom: spacing.xl },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  tag: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 4 },
+  groupTitle: { marginBottom: spacing.md },
   group: { borderRadius: radius.lg, borderWidth: 1, marginBottom: spacing.lg, overflow: 'hidden' },
-  segment: { flexDirection: 'row', borderRadius: radius.pill, padding: 3 },
-  segBtn: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.pill },
-  version: { textAlign: 'center', marginTop: spacing.sm },
+  version: { textAlign: 'center', marginTop: spacing.md },
 });
