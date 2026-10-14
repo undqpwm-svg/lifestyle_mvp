@@ -29,6 +29,14 @@ export const BasketballIcon = createLucideIcon('basketball', [
   ['path', { d: 'M19 4.9a10 10 0 0 0 0 14.2', key: 'b5' }],
 ]);
 
+/** Билет: ровный прямоугольник с неглубокими вырезами по бокам и линией отрыва. */
+export const TicketIcon = createLucideIcon('ticket-flat', [
+  ['path', { d: 'M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.6a2.4 2.4 0 0 0 0 4.8V16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.6a2.4 2.4 0 0 0 0-4.8Z', key: 'k1' }],
+  ['path', { d: 'M15 6v2', key: 'k2' }],
+  ['path', { d: 'M15 11v2', key: 'k3' }],
+  ['path', { d: 'M15 16v2', key: 'k4' }],
+]);
+
 export const TennisBallIcon = createLucideIcon('tennis-ball', [
   ['circle', { cx: '12', cy: '12', r: '10', key: 't1' }],
   ['path', { d: 'M5.2 4.7a10.5 10.5 0 0 1 0 14.6', key: 't2' }],

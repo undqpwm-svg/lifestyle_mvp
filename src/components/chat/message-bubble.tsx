@@ -12,6 +12,7 @@ import { useTheme } from '@/theme/use-theme';
 
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
+import { DeliveryTicks } from './delivery-ticks';
 import { VoicePlayer } from './voice-player';
 
 const MAX_W = 260;
@@ -69,6 +70,7 @@ export function MessageBubble({ message, mine, showAuthor, onOpenImage, onLongPr
           <Text variant="label" color={fg} style={[styles.time, onlyImages && styles.timeOnPhoto]}>
             {formatTime(message.createdAt, lang)}
           </Text>
+          {mine && message.status && !message.pending ? <DeliveryTicks status={message.status} size={14} onDark={onlyImages} /> : null}
         </View>
       </Pressable>
     </View>

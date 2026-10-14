@@ -259,9 +259,11 @@ export const useDeleteMessage = (communityId: ID) => useOptimisticDelete(qk.mess
 // Личные сообщения: опрос раз в 4 с в открытом диалоге, раз в 10 с — список диалогов
 export const useConversations = () =>
   useQuery({ queryKey: qk.conversations, queryFn: () => api.listConversations(), refetchInterval: 10_000 });
-export const useConversation = (id: ID) => useQuery({ queryKey: qk.conversation(id), queryFn: () => api.getConversation(id) });
+/** В открытом диалоге опрашиваем чаще — чтобы «печатает…» и галочки обновлялись почти сразу (с сервером — WebSocket). */
+export const useConversation = (id: ID) =>
+  useQuery({ queryKey: qk.conversation(id), queryFn: () => api.getConversation(id), refetchInterval: 1500 });
 export const useDirectMessages = (id: ID) =>
-  useQuery({ queryKey: qk.dms(id), queryFn: () => api.listDirectMessages(id), refetchInterval: 4000 });
+  useQuery({ queryKey: qk.dms(id), queryFn: () => api.listDirectMessages(id), refetchInterval: 2000 });
 export const useSendDirectMessage = (conversationId: ID) =>
   useOptimisticSend(qk.dms(conversationId), (m) => api.sendDirectMessage(conversationId, m), [qk.conversations, qk.friends]);
 export const useDeleteDirectMessage = (conversationId: ID) =>
@@ -375,4 +377,17 @@ export const useNotifications = () =>
 export function useMarkNotificationsRead() {
   const invalidate = useInvalidate();
   return useMutation({ mutationFn: () => api.markNotificationsRead(), onSuccess: () => invalidate(qk.notifications) });
+}
+
+/** Загрузка аватарки: сжатое фото → хранилище → профиль. null — удалить. */
+export function useUpdateAvatar() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (file: LocalMedia | null) => {
+      if (!file) return api.updateAvatar(null);
+      const { url } = await api.uploadMedia(file);
+      return api.updateAvatar(url);
+    },
+    onSuccess: () => invalidate(qk.me, ['users'], qk.friends, ['conversations']),
+  });
 }

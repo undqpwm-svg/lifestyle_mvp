@@ -115,7 +115,7 @@ export function EventCard({ event }: { event: EventItem }) {
 const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
   cover: { height: 168 },
-  overlay: { position: 'absolute', top: spacing.md, left: spacing.md, right: spacing.md, flexDirection: 'row', gap: spacing.sm },
+  overlay: { position: 'absolute', top: spacing.md, left: spacing.md, right: spacing.md, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   pill: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.pill },
   pillRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   promo: { marginLeft: 'auto' },

@@ -7,10 +7,10 @@ import { StyleSheet, View } from 'react-native';
 import { interestById } from '@/api/interests';
 import { useMyCommunities, useMyOrganizations, useMySubscription, useProfile } from '@/api/queries';
 import { useAuth, useMe } from '@/auth/auth-context';
+import { AvatarPicker } from '@/components/avatar-picker';
 import { CityPicker } from '@/components/city-picker';
 import { INTEREST_ICONS } from '@/components/icons';
 import { SettingsRow } from '@/components/settings-row';
-import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
@@ -49,7 +49,7 @@ export default function ProfileScreen() {
       {/* Карточка пользователя — тёмная секция в стиле блока «Для организаторов» на сайте */}
       <View style={[styles.hero, { backgroundColor: colors.inverse }]}>
         <View style={styles.heroTop}>
-          <Avatar name={me.name} size={56} />
+          <AvatarPicker name={me.name} uri={profile.data?.avatarUrl} size={64} />
           <View style={{ flex: 1 }}>
             <Text variant="h2" color="onInverse">
               {me.name}

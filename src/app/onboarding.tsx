@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { api } from '@/api/client';
+import { useProfile } from '@/api/queries';
 import type { InterestId } from '@/api/types';
 import { useAuth } from '@/auth/auth-context';
+import { AvatarPicker } from '@/components/avatar-picker';
 import { CityPicker } from '@/components/city-picker';
 import { InterestPicker } from '@/components/interest-picker';
 import { Button } from '@/components/ui/button';
@@ -22,6 +24,7 @@ export default function OnboardingScreen() {
   const [cityId, setCityId] = useState<CityId>(user?.cityId ?? feedCity);
   const [interests, setInterests] = useState<InterestId[]>(user?.interests ?? []);
   const [referral, setReferral] = useState('');
+  const profile = useProfile();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const valid = name.trim().length >= 2 && interests.length > 0;
@@ -44,6 +47,12 @@ export default function OnboardingScreen() {
     <Screen edges={['top', 'bottom']}>
       <View style={styles.body}>
         <Text variant="h1">{t.onboarding.title}</Text>
+        <View style={styles.avatar}>
+          <AvatarPicker name={name || '?'} uri={profile.data?.avatarUrl} size={96} onError={setError} />
+          <Text variant="caption" color="textMuted">
+            {t.onboarding.avatar}
+          </Text>
+        </View>
         <TextField
           label={t.onboarding.name}
           placeholder={t.onboarding.namePlaceholder}
@@ -90,4 +99,5 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   body: { flex: 1, gap: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.xl },
   block: { gap: spacing.sm },
+  avatar: { alignItems: 'center', gap: spacing.sm },
 });

@@ -28,7 +28,7 @@ export default function BlockedScreen() {
           {blocked.data.map((p, i) => (
             <View key={p.id} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }]}>
               <Pressable style={styles.person} onPress={() => router.push({ pathname: '/user/[id]', params: { id: p.id } })}>
-                <Avatar name={p.name} size={40} />
+                <Avatar name={p.name} uri={p.avatarUrl} size={40} />
                 <Text variant="bodyStrong" style={{ flex: 1 }}>
                   {p.name}
                 </Text>

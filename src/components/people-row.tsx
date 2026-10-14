@@ -17,7 +17,7 @@ export function PeopleRow({ people }: { people: PersonRef[] }) {
           accessibilityRole="link"
           onPress={() => router.push({ pathname: '/user/[id]', params: { id: p.id } })}
           style={styles.item}>
-          <Avatar name={p.name} size={48} />
+          <Avatar name={p.name} uri={p.avatarUrl} size={48} />
           <Text variant="label" numberOfLines={1} style={styles.name}>
             {p.name.split(' ')[0]}
           </Text>

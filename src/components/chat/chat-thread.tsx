@@ -15,6 +15,7 @@ import { Text } from '../ui/text';
 import { Composer } from './composer';
 import { ImageViewer } from './image-viewer';
 import { MessageBubble } from './message-bubble';
+import { TypingBubble } from './typing-bubble';
 
 type Props = {
   messages: MessageView[];
@@ -29,10 +30,14 @@ type Props = {
   onAuthorPress?: (userId: string) => void;
   /** Плашка над полем ввода (например, «Вы не в друзьях») */
   banner?: ReactNode;
+  /** Собеседник печатает — пузырь с точками внизу ленты */
+  typingLabel?: string | null;
+  /** Пользователь набирает текст (для «печатает…» у собеседника) */
+  onTyping?: () => void;
 };
 
 // Лента сообщений + поле ввода: общая для чата сообщества и личных сообщений.
-export function ChatThread({ messages, loading, meId, showAuthors, onSend, canDelete, onDelete, onReport, onAuthorPress, banner }: Props) {
+export function ChatThread({ messages, loading, meId, showAuthors, onSend, canDelete, onDelete, onReport, onAuthorPress, banner, typingLabel, onTyping }: Props) {
   const { colors } = useTheme();
   const { t, lang } = useAppSettings();
   const [viewer, setViewer] = useState<string | null>(null);
@@ -52,6 +57,8 @@ export function ChatThread({ messages, loading, meId, showAuthors, onSend, canDe
         keyExtractor={(m) => m.id}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
+        // В перевёрнутом списке «шапка» — это низ ленты, где и показываем «печатает…»
+        ListHeaderComponent={typingLabel ? <TypingBubble label={typingLabel} /> : null}
         ListEmptyComponent={
           loading ? null : (
             // В перевёрнутом списке пустое состояние тоже переворачивается — возвращаем обратно.
@@ -97,6 +104,7 @@ export function ChatThread({ messages, loading, meId, showAuthors, onSend, canDe
         </Pressable>
       ) : null}
       <Composer
+        onTyping={onTyping}
         onError={setError}
         onSend={(m) => {
           setError(null);

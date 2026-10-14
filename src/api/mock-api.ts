@@ -40,7 +40,7 @@ import type {
 // чтобы UI можно было разрабатывать и показывать без сервера.
 // Код подтверждения в моке всегда 1111.
 
-const STORAGE_KEY = 'lifestyle.mockdb.v7';
+const STORAGE_KEY = 'lifestyle.mockdb.v8';
 const MOCK_OTP = '1111';
 const TOKEN_PREFIX = 'mock-token:';
 const RESEED_AFTER_MS = 3 * 86_400_000;
@@ -97,7 +97,10 @@ async function currentUser(db: Db): Promise<DbUser> {
 }
 
 const publicUser = ({ referredBy: _r, ...u }: DbUser): User => ({ ...u });
-const person = (db: Db, id: string): PersonRef => ({ id, name: db.users.find((u) => u.id === id)?.name ?? '—' });
+const person = (db: Db, id: string): PersonRef => {
+  const u = db.users.find((x) => x.id === id);
+  return { id, name: u?.name ?? '—', avatarUrl: u?.avatarUrl };
+};
 
 // Справочные выборки
 
@@ -354,6 +357,15 @@ export const mockApi: Api = {
     Object.assign(user, { ...input, name: input.name.trim() });
     await save();
     return publicUser(user);
+  },
+
+  async updateAvatar(avatarUrl) {
+    await delay();
+    const db = await loadDb();
+    const me = await currentUser(db);
+    me.avatarUrl = avatarUrl ?? undefined;
+    await save();
+    return publicUser(me);
   },
 
   async applyReferral(code) {
@@ -783,6 +795,7 @@ export const mockApi: Api = {
     return {
       id: u.id,
       name: u.name,
+      avatarUrl: u.avatarUrl,
       cityId: u.cityId,
       interests: u.interests,
       friendship,
@@ -864,6 +877,7 @@ export const mockApi: Api = {
     await delay(150);
     const db = await loadDb();
     const me = await currentUser(db);
+    if (markDelivered(db, me.id)) await save();
     return db.conversations
       .filter((c) => c.members.includes(me.id) && db.directMessages.some((m) => m.conversationId === c.id))
       .map((c) => toConversation(db, c, me.id))
@@ -899,10 +913,12 @@ export const mockApi: Api = {
     const me = await currentUser(db);
     const c = db.conversations.find((x) => x.id === conversationId);
     assert(c && c.members.includes(me.id), 'forbidden');
+    if (markDelivered(db, me.id)) await save();
     return db.directMessages
       .filter((m) => m.conversationId === conversationId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, 200);
+      .slice(0, 200)
+      .map((m) => withStatus(m, me.id));
   },
 
   async sendDirectMessage(conversationId, message) {
@@ -928,11 +944,12 @@ export const mockApi: Api = {
     };
     db.directMessages.push(msg);
     c.lastRead[me.id] = msg.createdAt;
+    db.typing = db.typing.filter((x) => !(x.conversationId === c.id && x.userId === me.id));
     // На бэкенде — push получателю; здесь уведомление попадёт в его ленту.
     notify(db, peerId, 'direct_message', { name: me.name }, { pathname: '/messages/[id]', params: { id: c.id } });
     await save();
-    if (isFirst && SEED_USERS.has(peerId)) scheduleDirectReply(db, c.id, peerId, me.id);
-    return msg;
+    if (SEED_USERS.has(peerId)) simulatePeer(db, c.id, msg.id, peerId, me.id, isFirst);
+    return withStatus(msg, me.id);
   },
 
   async deleteDirectMessage(messageId) {
@@ -950,8 +967,23 @@ export const mockApi: Api = {
     const me = await currentUser(db);
     const c = db.conversations.find((x) => x.id === conversationId && x.members.includes(me.id));
     if (!c) return;
-    c.lastRead[me.id] = now();
+    const t = now();
+    c.lastRead[me.id] = t;
+    // Прочитал собеседник → у автора две зелёные галочки
+    db.directMessages
+      .filter((m) => m.conversationId === conversationId && m.authorId !== me.id && !m.readAt)
+      .forEach((m) => {
+        m.deliveredAt ??= t;
+        m.readAt = t;
+      });
     await save();
+  },
+
+  async setTyping(conversationId) {
+    const db = await loadDb();
+    const me = await currentUser(db);
+    db.typing = db.typing.filter((x) => !(x.conversationId === conversationId && x.userId === me.id));
+    db.typing.push({ conversationId, userId: me.id, until: Date.now() + 5000 });
   },
 
   async sendFriendRequest(userId) {
@@ -1283,32 +1315,72 @@ function toConversation(db: Db, c: DbConversation, meId: string): Conversation {
     isFriend: friendIds(db, meId).includes(peerId),
     canMessage: !blockedEither(db, meId, peerId),
     blockedByMe: db.blocks.some((x) => x.by === meId && x.target === peerId),
-    lastMessage: last ? { text: last.text, authorId: last.authorId, createdAt: last.createdAt, kind: kind(last) } : null,
+    lastMessage: last
+      ? { text: last.text, authorId: last.authorId, createdAt: last.createdAt, kind: kind(last), status: withStatus(last, meId).status ?? 'sent' }
+      : null,
+    peerTyping: db.typing.some((x) => x.conversationId === c.id && x.userId === peerId && x.until > Date.now()),
     unread: messages.filter((m) => m.authorId !== meId && m.createdAt > lastRead).length,
     updatedAt: last?.createdAt ?? c.createdAt,
   };
 }
 
-// Демо: тестовые пользователи отвечают на первое личное сообщение.
+/** Статус для автора сообщения: прочитано / доставлено / отправлено. */
+function withStatus(m: DirectMessage, meId: string): DirectMessage {
+  if (m.authorId !== meId) return m;
+  return { ...m, status: m.readAt ? 'read' : m.deliveredAt ? 'delivered' : 'sent' };
+}
+
+/** Пользователь в сети (открыл приложение) → входящие ему сообщения доставлены. На бэкенде — ack по WebSocket/push. */
+function markDelivered(db: Db, meId: string): boolean {
+  const mine = new Set(db.conversations.filter((c) => c.members.includes(meId)).map((c) => c.id));
+  let changed = false;
+  for (const m of db.directMessages) {
+    if (mine.has(m.conversationId) && m.authorId !== meId && !m.deliveredAt) {
+      m.deliveredAt = now();
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+// Демо: тестовые пользователи «в сети» — получают и читают сообщения,
+// а на первое сообщение отвечают (сначала видно «печатает…»).
 const DIRECT_REPLIES = [
   'Привет! Рада знакомству. Идёшь на ближайшую игру?',
   'Привет! Да, давай. Увидимся на встрече!',
   'Здравствуй! Конечно, пиши, если что-то нужно по встречам.',
 ];
 
-function scheduleDirectReply(db: Db, conversationId: string, fromId: string, toId: string) {
+function simulatePeer(db: Db, conversationId: string, messageId: string, peerId: string, meId: string, reply: boolean) {
+  const msg = () => db.directMessages.find((m) => m.id === messageId);
   setTimeout(() => {
-    const author = person(db, fromId);
+    const m = msg();
+    if (m) m.deliveredAt ??= now();
+    save();
+  }, 1200);
+  setTimeout(() => {
+    const m = msg();
+    if (m) m.readAt ??= now();
+    const c = db.conversations.find((x) => x.id === conversationId);
+    if (c) c.lastRead[peerId] = now();
+    if (reply) db.typing.push({ conversationId, userId: peerId, until: Date.now() + 4000 });
+    save();
+  }, 3000);
+  if (!reply) return;
+  setTimeout(() => {
+    const author = person(db, peerId);
+    db.typing = db.typing.filter((x) => !(x.conversationId === conversationId && x.userId === peerId));
     db.directMessages.push({
       id: uid('dmm'),
       conversationId,
-      authorId: fromId,
+      authorId: peerId,
       authorName: author.name,
-      text: DIRECT_REPLIES[fromId.length % DIRECT_REPLIES.length],
+      text: DIRECT_REPLIES[peerId.length % DIRECT_REPLIES.length],
       attachments: [],
       createdAt: now(),
+      deliveredAt: now(),
     });
-    notify(db, toId, 'direct_message', { name: author.name }, { pathname: '/messages/[id]', params: { id: conversationId } });
+    notify(db, meId, 'direct_message', { name: author.name }, { pathname: '/messages/[id]', params: { id: conversationId } });
     save();
-  }, 2500);
+  }, 6500);
 }

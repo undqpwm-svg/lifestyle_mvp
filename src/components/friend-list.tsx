@@ -36,7 +36,7 @@ export function FriendList({ friends, onPick, trailing }: Props) {
             {important.map((f) => (
               <Pressable key={f.id} accessibilityRole="button" onPress={() => onPick(f.id)} style={styles.topItem}>
                 <View style={[styles.ring, { borderColor: palette.yellow }]}>
-                  <Avatar name={f.name} size={60} />
+                  <Avatar name={f.name} uri={f.avatarUrl} size={60} />
                 </View>
                 <Text variant="label" numberOfLines={1} style={styles.topName}>
                   {f.name.split(' ')[0]}
@@ -56,7 +56,7 @@ export function FriendList({ friends, onPick, trailing }: Props) {
               key={f.id}
               onPress={() => onPick(f.id)}
               style={({ pressed }) => [styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }, pressed && { opacity: 0.8 }]}>
-              <Avatar name={f.name} size={40} />
+              <Avatar name={f.name} uri={f.avatarUrl} size={40} />
               <Text variant="bodyStrong" style={{ flex: 1 }} numberOfLines={1}>
                 {f.name}
               </Text>

@@ -31,6 +31,7 @@ export type User = {
   referralCode: string;
   /** Бонусный баланс в тенге (реферальная программа) */
   bonusKzt: number;
+  avatarUrl?: string;
   createdAt: ISODate;
 };
 
@@ -42,11 +43,12 @@ export type HostRating = { avg: number; count: number };
 // Друзья и публичный профиль
 export type FriendshipStatus = 'self' | 'none' | 'outgoing' | 'incoming' | 'friends';
 
-export type PersonRef = { id: ID; name: string };
+export type PersonRef = { id: ID; name: string; avatarUrl?: string };
 
 export type PublicProfile = {
   id: ID;
   name: string;
+  avatarUrl?: string;
   cityId: CityId;
   interests: InterestId[];
   friendship: FriendshipStatus;
@@ -138,10 +140,21 @@ export type ChatMessage = {
 export type NewMessage = { text: string; attachments: Attachment[] };
 
 /** Общее для сообщений в чате сообщества и в личке — то, что рисует пузырь сообщения. */
-export type MessageView = Pick<ChatMessage, 'id' | 'authorId' | 'authorName' | 'text' | 'attachments' | 'createdAt' | 'pending'>;
+/** Статус своего сообщения в личке: sent — одна серая галочка, delivered — две серые, read — две зелёные */
+export type DeliveryStatus = 'sent' | 'delivered' | 'read';
+
+export type MessageView = Pick<ChatMessage, 'id' | 'authorId' | 'authorName' | 'text' | 'attachments' | 'createdAt' | 'pending'> & {
+  status?: DeliveryStatus;
+};
 
 // Личные сообщения: диалог 1-на-1, писать можно и друзьям, и не друзьям
-export type DirectMessage = Omit<ChatMessage, 'communityId'> & { conversationId: ID };
+export type DirectMessage = Omit<ChatMessage, 'communityId'> & {
+  conversationId: ID;
+  deliveredAt?: ISODate;
+  readAt?: ISODate;
+  /** Для своих сообщений: доставлено/прочитано собеседником */
+  status?: DeliveryStatus;
+};
 
 export type Conversation = {
   id: ID;
@@ -151,7 +164,9 @@ export type Conversation = {
   canMessage: boolean;
   /** Я заблокировал собеседника (можно разблокировать) */
   blockedByMe: boolean;
-  lastMessage: { text: string; authorId: ID; createdAt: ISODate; kind: 'text' | 'image' | 'voice' | 'event' } | null;
+  lastMessage: { text: string; authorId: ID; createdAt: ISODate; kind: 'text' | 'image' | 'voice' | 'event'; status: DeliveryStatus } | null;
+  /** Собеседник печатает прямо сейчас */
+  peerTyping: boolean;
   unread: number;
   updatedAt: ISODate;
 };

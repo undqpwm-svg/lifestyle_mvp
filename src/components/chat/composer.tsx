@@ -8,7 +8,7 @@ import {
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, ImageIcon, Mic, Paperclip, SendHorizontal, Trash2, X } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,11 +25,11 @@ import { Text } from '../ui/text';
 const MAX_IMAGES = 6;
 const MIN_VOICE_MS = 800;
 
-type Props = { onSend: (m: OutgoingMessage) => void; onError: (text: string) => void };
+type Props = { onSend: (m: OutgoingMessage) => void; onError: (text: string) => void; onTyping?: () => void };
 
 // Поле ввода чата: текст, фото (галерея/камера) и голосовые.
 // Если поле пустое — справа микрофон, если есть текст или фото — кнопка «Отправить».
-export function Composer({ onSend, onError }: Props) {
+export function Composer({ onSend, onError, onTyping }: Props) {
   const { colors } = useTheme();
   const { t } = useAppSettings();
   const insets = useSafeAreaInsets();
@@ -42,6 +42,17 @@ export function Composer({ onSend, onError }: Props) {
   const recState = useAudioRecorderState(recorder, 200);
 
   const canSend = text.trim().length > 0 || images.length > 0;
+  const lastTyping = useRef(0);
+
+  // «Печатает…» отправляем не чаще раза в 3 секунды
+  const changeText = (v: string) => {
+    setText(v);
+    const t = Date.now();
+    if (onTyping && v && t - lastTyping.current > 3000) {
+      lastTyping.current = t;
+      onTyping();
+    }
+  };
 
   const send = () => {
     if (!canSend) return;
@@ -140,7 +151,7 @@ export function Composer({ onSend, onError }: Props) {
         <View style={[styles.inputBox, { backgroundColor: colors.surface, borderColor: colors.line }]}>
           <TextInput
             value={text}
-            onChangeText={setText}
+            onChangeText={changeText}
             placeholder={t.chat.placeholder}
             placeholderTextColor={colors.textFaint}
             multiline

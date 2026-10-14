@@ -58,6 +58,7 @@ export const en: Dictionary = {
     interestsHint: "Pick at least one — we'll suggest meetups and communities",
     finish: 'Start',
     referral: "Friend's promo code (optional)",
+    avatar: 'Add photo',
   },
   events: {
     greeting: 'Your people are gathering nearby',
@@ -231,6 +232,10 @@ export const en: Dictionary = {
     invite: 'Invite a friend',
     bonus: 'Bonuses',
     dashboard: 'Dashboard',
+    avatar: 'Profile photo',
+    avatarChoose: 'Choose from gallery',
+    avatarTake: 'Take a photo',
+    avatarRemove: 'Remove photo',
   },
   payment: {
     title: 'Payment',
@@ -401,6 +406,7 @@ export const en: Dictionary = {
     recent: 'Recent chats',
     openEvent: 'Open meetup',
     blocked: 'Messaging unavailable',
+    typing: 'typing…',
   },
   chat: {
     placeholder: 'Message',

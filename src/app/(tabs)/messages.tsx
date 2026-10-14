@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useConversations } from '@/api/queries';
 import type { Conversation } from '@/api/types';
 import { useMe } from '@/auth/auth-context';
+import { DeliveryTicks } from '@/components/chat/delivery-ticks';
 import { Avatar } from '@/components/ui/avatar';
 import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
@@ -65,7 +66,7 @@ function ConversationRow({ c, first }: { c: Conversation; first: boolean }) {
     <Pressable
       onPress={() => router.push({ pathname: '/messages/[id]', params: { id: c.id } })}
       style={({ pressed }) => [styles.row, !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }, pressed && { opacity: 0.8 }]}>
-      <Avatar name={c.peer.name} size={48} />
+      <Avatar name={c.peer.name} uri={c.peer.avatarUrl} size={48} />
       <View style={{ flex: 1, gap: 2 }}>
         <View style={styles.rowTop}>
           <Text variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>
@@ -76,11 +77,19 @@ function ConversationRow({ c, first }: { c: Conversation; first: boolean }) {
           </Text>
         </View>
         <View style={styles.rowTop}>
-          {kindIcon ? <Icon icon={kindIcon} size={14} color="textMuted" /> : null}
-          <Text variant="caption" color={c.unread ? 'text' : 'textMuted'} numberOfLines={1} style={{ flex: 1 }}>
-            {last?.authorId === me.id ? `${t.messages.you}: ` : ''}
-            {preview}
-          </Text>
+          {c.peerTyping ? (
+            <Text variant="caption" color="success" numberOfLines={1} style={{ flex: 1 }}>
+              {t.messages.typing}
+            </Text>
+          ) : (
+            <>
+              {last?.authorId === me.id ? <DeliveryTicks status={last.status} size={14} /> : null}
+              {kindIcon ? <Icon icon={kindIcon} size={14} color="textMuted" /> : null}
+              <Text variant="caption" color={c.unread ? 'text' : 'textMuted'} numberOfLines={1} style={{ flex: 1 }}>
+                {preview}
+              </Text>
+            </>
+          )}
           {c.unread ? (
             <View style={[styles.badge, { backgroundColor: colors.accent }]}>
               <Text variant="label" color="onAccent">

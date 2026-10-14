@@ -49,7 +49,7 @@ export default function UserScreen() {
         }}
       />
       <View style={styles.head}>
-        <Avatar name={p.name} size={88} />
+        <Avatar name={p.name} uri={p.avatarUrl} size={88} />
         <Text variant="h2">{p.name}</Text>
         <Text color="textMuted">{getCity(p.cityId).name[lang]}</Text>
         <View style={styles.stats}>

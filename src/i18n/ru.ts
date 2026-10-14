@@ -56,6 +56,7 @@ export const ru = {
     interestsHint: 'Выберите хотя бы одно — подберём встречи и сообщества',
     finish: 'Начать',
     referral: 'Промокод друга (необязательно)',
+    avatar: 'Добавить фото',
   },
   events: {
     greeting: 'Твои люди уже собираются рядом',
@@ -229,6 +230,10 @@ export const ru = {
     invite: 'Пригласить друга',
     bonus: 'Бонусы',
     dashboard: 'Кабинет',
+    avatar: 'Фото профиля',
+    avatarChoose: 'Выбрать из галереи',
+    avatarTake: 'Сделать фото',
+    avatarRemove: 'Удалить фото',
   },
   payment: {
     title: 'Оплата',
@@ -399,6 +404,7 @@ export const ru = {
     recent: 'Недавние чаты',
     openEvent: 'Открыть встречу',
     blocked: 'Переписка недоступна',
+    typing: 'печатает…',
   },
   chat: {
     placeholder: 'Сообщение',

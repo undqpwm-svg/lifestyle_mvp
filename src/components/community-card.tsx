@@ -10,6 +10,7 @@ import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
 import { INTEREST_ICONS } from './icons';
+import { RatingBadge } from './stars';
 import { Cover } from './ui/cover';
 import { Icon } from './ui/icon';
 import { Text } from './ui/text';
@@ -18,6 +19,7 @@ export function communityCover(c: Pick<Community, 'coverUrl' | 'interests'>, wid
   return c.coverUrl ?? (c.interests[0] ? pexels(DEFAULT_COVERS[c.interests[0]], width) : undefined);
 }
 
+// Карточка сообщества: обложка сверху, название и описание целиком, темы — чипами с переносом.
 export function CommunityCard({ community }: { community: Community }) {
   const { colors } = useTheme();
   const { lang, t } = useAppSettings();
@@ -25,34 +27,40 @@ export function CommunityCard({ community }: { community: Community }) {
     <Pressable
       accessibilityRole="link"
       onPress={() => router.push({ pathname: '/community/[id]', params: { id: community.id } })}
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: colors.surface, borderColor: colors.line, opacity: pressed ? 0.92 : 1 },
-      ]}>
+      style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.line, opacity: pressed ? 0.92 : 1 }]}>
       <Cover
-        uri={communityCover(community, 240)}
+        uri={communityCover(community, 720)}
         fallbackIcon={community.interests[0] ? INTEREST_ICONS[community.interests[0]] : Users}
-        radius={radius.md}
-        iconSize={26}
-        style={styles.thumb}
-      />
+        iconSize={36}
+        style={styles.cover}>
+        {community.myRole ? (
+          <View style={[styles.member, { backgroundColor: colors.inverse }]}>
+            <Icon icon={Check} size={13} color="onInverse" strokeWidth={3} />
+            <Text variant="label" color="onInverse">
+              {t.communities.mine}
+            </Text>
+          </View>
+        ) : null}
+      </Cover>
       <View style={styles.body}>
-        <Text variant="h3" numberOfLines={1}>
-          {community.name}
-        </Text>
-        <Text variant="caption" color="textMuted" numberOfLines={2}>
-          {community.description}
-        </Text>
+        <Text variant="h3">{community.name}</Text>
+        {community.description ? <Text color="textMuted">{community.description}</Text> : null}
         <View style={styles.meta}>
-          <Icon icon={Users} size={14} color="textMuted" />
-          <Text variant="caption" color="textMuted" numberOfLines={1} style={{ flexShrink: 1 }}>
-            {community.membersCount} {t.common.members} ·{' '}
-            {community.interests
-              .map((i) => interestById.get(i)?.name[lang])
-              .filter(Boolean)
-              .join(', ')}
-          </Text>
-          {community.myRole ? <Icon icon={Check} size={14} color="text" strokeWidth={3} /> : null}
+          <View style={styles.metaItem}>
+            <Icon icon={Users} size={14} color="textMuted" />
+            <Text variant="caption" color="textMuted">
+              {community.membersCount} {t.common.members}
+            </Text>
+          </View>
+          {community.rating ? <RatingBadge avg={community.rating.avg} count={community.rating.count} /> : null}
+        </View>
+        <View style={styles.tags}>
+          {community.interests.map((i) => (
+            <View key={i} style={[styles.tag, { backgroundColor: colors.surfaceAlt }]}>
+              <Icon icon={INTEREST_ICONS[i]} size={13} />
+              <Text variant="label">{interestById.get(i)?.name[lang]}</Text>
+            </View>
+          ))}
         </View>
       </View>
     </Pressable>
@@ -60,8 +68,22 @@ export function CommunityCard({ community }: { community: Community }) {
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', gap: spacing.md, borderRadius: radius.lg, borderWidth: 1, padding: spacing.md },
-  thumb: { width: 76, height: 76 },
-  body: { flex: 1, gap: 4, justifyContent: 'center' },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  card: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
+  cover: { height: 130 },
+  member: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+  },
+  body: { padding: spacing.lg, gap: spacing.sm },
+  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.lg, rowGap: 4 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill },
 });

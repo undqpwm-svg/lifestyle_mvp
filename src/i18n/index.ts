@@ -12,7 +12,15 @@ export const LANGS: { id: Lang; label: string }[] = [
 
 export const dictionaries: Record<Lang, Dictionary> = { ru, kz, en };
 
-// Локаль для Intl: казахский в Intl — 'kk'.
-export const intlLocale: Record<Lang, string> = { ru: 'ru-RU', kz: 'kk-KZ', en: 'en-US' };
+// Локаль для Intl: казахский в Intl — 'kk'. Если движок его не знает (часть браузеров, Hermes на Android),
+// даты показываем в русском формате — он привычен в Казахстане, в отличие от английского.
+const kkSupported = (() => {
+  try {
+    return Intl.DateTimeFormat.supportedLocalesOf(['kk-KZ']).length > 0;
+  } catch {
+    return false;
+  }
+})();
+export const intlLocale: Record<Lang, string> = { ru: 'ru-RU', kz: kkSupported ? 'kk-KZ' : 'ru-RU', en: 'en-US' };
 
 export type { Dictionary };

@@ -1,7 +1,7 @@
 import type { Dictionary } from './ru';
 
 export const kz: Dictionary = {
-  tabs: { events: 'Кездесулер', communities: 'Қауымдастықтар', messages: 'Чаттар', bookings: 'Жазылулар', profile: 'Профиль' },
+  tabs: { events: 'Кездесулер', communities: 'Қауымдастық', messages: 'Чаттар', bookings: 'Жазылулар', profile: 'Профиль' },
   common: {
     retry: 'Қайталау',
     error: 'Деректерді жүктеу мүмкін болмады',
@@ -58,6 +58,7 @@ export const kz: Dictionary = {
     interestsHint: 'Кемінде біреуін таңдаңыз — кездесулер мен қауымдастықтарды іріктейміз',
     finish: 'Бастау',
     referral: 'Досыңыздың промокоды (міндетті емес)',
+    avatar: 'Сурет қосу',
   },
   events: {
     greeting: 'Өз адамдарың осында жиналады',
@@ -231,6 +232,10 @@ export const kz: Dictionary = {
     invite: 'Досты шақыру',
     bonus: 'Бонустар',
     dashboard: 'Кабинет',
+    avatar: 'Профиль суреті',
+    avatarChoose: 'Галереядан таңдау',
+    avatarTake: 'Суретке түсіру',
+    avatarRemove: 'Суретті жою',
   },
   payment: {
     title: 'Төлем',
@@ -401,6 +406,7 @@ export const kz: Dictionary = {
     recent: 'Соңғы чаттар',
     openEvent: 'Кездесуді ашу',
     blocked: 'Хат алмасу қолжетімсіз',
+    typing: 'жазып жатыр…',
   },
   chat: {
     placeholder: 'Хабарлама',

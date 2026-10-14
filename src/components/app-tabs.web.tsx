@@ -6,14 +6,14 @@ import {
   type TabListProps,
   type TabTriggerSlotProps,
 } from 'expo-router/ui';
-import { CalendarDays, MessageCircle, Ticket, User, Users } from 'lucide-react-native';
+import { CalendarDays, MessageCircle, User, Users } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useAppSettings } from '@/state/app-settings';
 import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
-import { Icon, type LucideIcon } from './ui/icon';
+import { Icon, TicketIcon, type LucideIcon } from './ui/icon';
 import { Text } from './ui/text';
 
 // Веб-версия таббара (для превью в браузере): плавающая «пилюля» снизу в стиле сайта.
@@ -36,7 +36,7 @@ export default function AppTabs() {
             <TabButton icon={MessageCircle} label={t.tabs.messages} />
           </TabTrigger>
           <TabTrigger name="bookings" href="/bookings" asChild>
-            <TabButton icon={Ticket} label={t.tabs.bookings} />
+            <TabButton icon={TicketIcon} label={t.tabs.bookings} />
           </TabTrigger>
           <TabTrigger name="profile" href="/profile" asChild>
             <TabButton icon={User} label={t.tabs.profile} />
@@ -61,7 +61,7 @@ function TabButton({ icon, label, isFocused, ...props }: TabTriggerSlotProps & {
   return (
     <Pressable {...props} style={[styles.btn, isFocused && { backgroundColor: colors.accent }]}>
       <Icon icon={icon} size={20} color={isFocused ? 'onAccent' : 'onInverse'} />
-      <Text variant="label" color={isFocused ? 'onAccent' : 'onInverse'} numberOfLines={1}>
+      <Text variant="label" color={isFocused ? 'onAccent' : 'onInverse'} numberOfLines={1} style={styles.label}>
         {label}
       </Text>
     </Pressable>
@@ -69,7 +69,8 @@ function TabButton({ icon, label, isFocused, ...props }: TabTriggerSlotProps & {
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', bottom: spacing.lg, left: spacing.md, right: spacing.md, alignItems: 'center' },
-  bar: { flexDirection: 'row', padding: 6, borderRadius: radius.pill, gap: 2, width: '100%', maxWidth: 480 },
-  btn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: radius.pill, gap: 2 },
+  wrap: { position: 'absolute', bottom: spacing.lg, left: spacing.sm, right: spacing.sm, alignItems: 'center' },
+  bar: { flexDirection: 'row', padding: 5, borderRadius: radius.pill, gap: 0, width: '100%', maxWidth: 480 },
+  btn: { flexGrow: 1, flexBasis: 'auto', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 4, borderRadius: radius.pill, gap: 2 },
+  label: { fontSize: 10.5, lineHeight: 14, letterSpacing: 0 },
 });

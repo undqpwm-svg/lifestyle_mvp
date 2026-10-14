@@ -55,6 +55,7 @@ export function createHttpApi(baseUrl: string): Api {
     me: () => request('GET', '/v1/me'),
     updateProfile: (input) => request('PATCH', '/v1/me', input),
     applyReferral: (code) => request('POST', '/v1/me/referral', { code }),
+    updateAvatar: (avatarUrl) => request('PATCH', '/v1/me', { avatarUrl }),
     registerPushToken: (token) => request('POST', '/v1/me/push-tokens', { token }),
 
     listEvents: (f) =>
@@ -89,6 +90,7 @@ export function createHttpApi(baseUrl: string): Api {
     sendDirectMessage: (cid, message) => request('POST', `/v1/conversations/${id(cid)}/messages`, message),
     deleteDirectMessage: (mid) => request('DELETE', `/v1/direct-messages/${id(mid)}`),
     markConversationRead: (cid) => request('POST', `/v1/conversations/${id(cid)}/read`),
+    setTyping: (cid) => request('POST', `/v1/conversations/${id(cid)}/typing`),
     removeFriend: (uid) => request('DELETE', `/v1/me/friends/${id(uid)}`),
     blockUser: (uid) => request('POST', '/v1/me/blocks', { userId: uid }),
     unblockUser: (uid) => request('DELETE', `/v1/me/blocks/${id(uid)}`),

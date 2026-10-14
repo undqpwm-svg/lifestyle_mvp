@@ -40,6 +40,8 @@ export interface Api {
   verifyCode(phone: string, code: string): Promise<AuthResult>;
   me(): Promise<User>;
   updateProfile(input: ProfileInput): Promise<User>;
+  /** URL из uploadMedia или null — удалить фото */
+  updateAvatar(avatarUrl: string | null): Promise<User>;
   /** Промокод друга: оба получают бонусы. Один раз на аккаунт. */
   applyReferral(code: string): Promise<User>;
   /** Expo push-токен устройства для серверных уведомлений */
@@ -99,6 +101,8 @@ export interface Api {
   sendDirectMessage(conversationId: ID, message: NewMessage): Promise<DirectMessage>;
   deleteDirectMessage(messageId: ID): Promise<void>;
   markConversationRead(conversationId: ID): Promise<void>;
+  /** «Печатает…»: клиент шлёт не чаще раза в 3 с, статус живёт 5 с */
+  setTyping(conversationId: ID): Promise<void>;
 
   // Уведомления
   listNotifications(): Promise<AppNotification[]>;

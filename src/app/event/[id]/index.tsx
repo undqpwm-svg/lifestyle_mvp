@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Check, ChevronRight, Crown, Hourglass, Info, Megaphone, QrCode, Send, Ticket, TriangleAlert } from 'lucide-react-native';
+import { Check, ChevronRight, Crown, Hourglass, Info, Megaphone, QrCode, Send, TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -29,7 +29,7 @@ import { SeatStepper } from '@/components/seat-stepper';
 import { ShareEventSheet } from '@/components/share-event-sheet';
 import { Button } from '@/components/ui/button';
 import { Cover } from '@/components/ui/cover';
-import { Icon } from '@/components/ui/icon';
+import { Icon, TicketIcon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { EmptyView, ErrorView, LoadingView } from '@/components/ui/state-view';
 import { Text } from '@/components/ui/text';
@@ -188,7 +188,7 @@ export default function EventScreen() {
             <Icon icon={booking.viaSubscription ? Crown : Check} size={18} strokeWidth={booking.viaSubscription ? 2 : 3} />
             <Text variant="bodyStrong">{booking.viaSubscription ? t.event.bookedViaPass : t.event.booked}</Text>
           </View>
-          <Button title={t.event.ticket} icon={Ticket} variant="dark" onPress={() => router.push({ pathname: '/ticket/[bookingId]', params: { bookingId: booking.id } })} />
+          <Button title={t.event.ticket} icon={TicketIcon} variant="dark" onPress={() => router.push({ pathname: '/ticket/[bookingId]', params: { bookingId: booking.id } })} />
           {booking.viaSubscription && lateCancel ? (
             <View style={styles.hint}>
               <Icon icon={TriangleAlert} size={14} color="textMuted" />

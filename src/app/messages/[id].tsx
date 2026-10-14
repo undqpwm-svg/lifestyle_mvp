@@ -46,7 +46,8 @@ export default function DirectChatScreen() {
         fallback={() => router.replace('/messages')}
         onPress={openProfile}
         title={peer?.name ?? ''}
-        avatar={peer ? <Avatar name={peer.name} size={40} /> : null}
+        subtitle={c?.peerTyping ? t.messages.typing : undefined}
+        avatar={peer ? <Avatar name={peer.name} uri={peer.avatarUrl} size={40} /> : null}
       />
       {conv.isPending ? (
         <LoadingView />
@@ -68,6 +69,8 @@ export default function DirectChatScreen() {
           loading={messages.isPending}
           meId={me.id}
           showAuthors={false}
+          typingLabel={c?.peerTyping ? `${peer?.name.split(' ')[0]} ${t.messages.typing}` : null}
+          onTyping={() => api.setTyping(id).catch(() => {})}
           onSend={(m, onError) => send.mutate(m, { onError })}
           canDelete={(m) => m.authorId === me.id}
           onDelete={(m) => remove.mutate(m.id)}

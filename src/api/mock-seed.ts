@@ -85,6 +85,8 @@ export type Db = {
   directMessages: DirectMessage[];
   /** by заблокировал target */
   blocks: { by: string; target: string; createdAt: string }[];
+  /** Кто печатает в диалоге и до какого момента (мс) */
+  typing: { conversationId: string; userId: string; until: number }[];
 };
 
 function at(dayOffset: number, hour: number, minute = 0): string {
@@ -304,6 +306,6 @@ export function createSeed(): Db {
   return {
     version: 1, users, organizations, communities, members, events, bookings, posts, messages,
     payments: [], subscriptions: [], reports: [], waitlist: [], reviews, friendships: [], notifications: [], pushTokens: [], notified: [],
-    conversations: [], directMessages: [], blocks: [],
+    conversations: [], directMessages: [], blocks: [], typing: [],
   };
 }
