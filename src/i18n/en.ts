@@ -1,0 +1,48 @@
+import type { Dictionary } from './ru';
+
+export const en: Dictionary = {
+  tabs: { events: 'Meetups', bookings: 'My bookings', profile: 'Profile' },
+  common: { retry: 'Retry', loading: 'Loading…', error: 'Failed to load data', from: 'from', free: 'Free' },
+  events: {
+    greeting: 'Your people are gathering nearby',
+    all: 'All',
+    empty: 'No meetups in this category yet',
+    seats: 'seats',
+    seatsLeft: 'Few seats left',
+    today: 'Today',
+    tomorrow: 'Tomorrow',
+  },
+  event: {
+    title: 'Meetup',
+    organizer: 'Organizer',
+    place: 'Place',
+    when: 'When',
+    price: 'Price',
+    participants: 'Participants',
+    book: 'Book via Telegram',
+    booked: 'Request sent',
+    full: 'Sold out',
+    notFound: 'Meetup not found',
+    offerNote: 'By booking you accept the public offer terms.',
+  },
+  bookings: {
+    title: 'My bookings',
+    empty: "You haven't booked anything yet",
+    emptyHint: 'Pick a meetup in the feed — your request will show up here.',
+    toFeed: 'Browse meetups',
+  },
+  profile: {
+    title: 'Profile',
+    loginTelegram: 'Sign in with Telegram',
+    loginHint: 'Sign in to see bookings and payments on all your devices.',
+    city: 'City',
+    language: 'Language',
+    organizer: 'Become an organizer',
+    community: 'City community',
+    offer: 'Public offer',
+    privacy: 'Privacy policy',
+    terms: 'Terms of use',
+    version: 'Version',
+  },
+  cityPicker: { title: 'Choose a city', close: 'Close' },
+};

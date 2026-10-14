@@ -1,0 +1,48 @@
+import type { Dictionary } from './ru';
+
+export const kz: Dictionary = {
+  tabs: { events: 'Кездесулер', bookings: 'Жазылуларым', profile: 'Профиль' },
+  common: { retry: 'Қайталау', loading: 'Жүктелуде…', error: 'Деректерді жүктеу мүмкін болмады', from: 'бастап', free: 'Тегін' },
+  events: {
+    greeting: 'Өз адамдарың осында жиналады',
+    all: 'Барлығы',
+    empty: 'Бұл санатта әзірге кездесу жоқ',
+    seats: 'орын',
+    seatsLeft: 'Орын аз қалды',
+    today: 'Бүгін',
+    tomorrow: 'Ертең',
+  },
+  event: {
+    title: 'Кездесу',
+    organizer: 'Ұйымдастырушы',
+    place: 'Орны',
+    when: 'Қашан',
+    price: 'Құны',
+    participants: 'Қатысушылар',
+    book: 'Telegram арқылы жазылу',
+    booked: 'Өтінім жіберілді',
+    full: 'Орын жоқ',
+    notFound: 'Кездесу табылмады',
+    offerNote: 'Жазыла отырып, сіз жария оферта шарттарын қабылдайсыз.',
+  },
+  bookings: {
+    title: 'Жазылуларым',
+    empty: 'Сіз әзірге ешқайда жазылмадыңыз',
+    emptyHint: 'Лентадан кездесуді таңдаңыз — өтінім осында пайда болады.',
+    toFeed: 'Кездесулерге',
+  },
+  profile: {
+    title: 'Профиль',
+    loginTelegram: 'Telegram арқылы кіру',
+    loginHint: 'Жазылулар мен төлемдерді барлық құрылғыда көру үшін кіру қажет.',
+    city: 'Қала',
+    language: 'Тіл',
+    organizer: 'Ұйымдастырушы болу',
+    community: 'Қала қауымдастығы',
+    offer: 'Жария оферта',
+    privacy: 'Құпиялылық саясаты',
+    terms: 'Пайдалану шарттары',
+    version: 'Нұсқа',
+  },
+  cityPicker: { title: 'Қаланы таңдаңыз', close: 'Жабу' },
+};
