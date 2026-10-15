@@ -25,6 +25,7 @@ import { PaymentSheet } from '@/components/payment/payment-sheet';
 import { PeopleRow } from '@/components/people-row';
 import { ReportButton } from '@/components/report-button';
 import { ReviewList } from '@/components/review-list';
+import { RouteButton } from '@/components/route-sheet';
 import { SeatStepper } from '@/components/seat-stepper';
 import { ShareEventSheet } from '@/components/share-event-sheet';
 import { Button } from '@/components/ui/button';
@@ -146,6 +147,8 @@ export default function EventScreen() {
           </View>
         ))}
       </View>
+
+      <RouteButton to={event.location} cityId={event.cityId} address={`${event.venue}, ${event.address}`} />
 
       {event.friendsGoing.length > 0 || (attendees.data?.length ?? 0) > 0 ? (
         <Section title={t.event.attendees}>

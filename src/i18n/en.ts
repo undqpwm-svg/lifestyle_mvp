@@ -201,6 +201,15 @@ export const en: Dictionary = {
     interests: 'Topics',
     create: 'Create',
   },
+  route: {
+    button: 'Directions in 2GIS',
+    title: 'How to get there',
+    pedestrian: 'Walk',
+    ctx: 'Public transport',
+    car: 'Drive',
+    taxi: 'Taxi',
+    showOnMap: 'Show on 2GIS map',
+  },
   org: {
     title: 'Organization',
     pending: 'Under review',

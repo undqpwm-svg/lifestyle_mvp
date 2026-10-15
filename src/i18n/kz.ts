@@ -201,6 +201,15 @@ export const kz: Dictionary = {
     interests: 'Тақырыптар',
     create: 'Құру',
   },
+  route: {
+    button: '2GIS-те бағыт',
+    title: 'Қалай жетуге болады',
+    pedestrian: 'Жаяу',
+    ctx: 'Қоғамдық көлік',
+    car: 'Көлікпен',
+    taxi: 'Таксимен',
+    showOnMap: '2GIS картасында көрсету',
+  },
   org: {
     title: 'Ұйым',
     pending: 'Тексерілуде',

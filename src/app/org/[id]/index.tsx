@@ -9,6 +9,7 @@ import { EventCard } from '@/components/event-card';
 import { ORG_TYPE_ICONS } from '@/components/icons';
 import { ReportButton } from '@/components/report-button';
 import { ReviewList } from '@/components/review-list';
+import { RouteButton } from '@/components/route-sheet';
 import { RatingBadge } from '@/components/stars';
 import { Button } from '@/components/ui/button';
 import { Cover } from '@/components/ui/cover';
@@ -58,6 +59,7 @@ export default function OrganizationScreen() {
           <Text variant="caption" color="textMuted">{org.address}</Text>
         </View>
         {org.description ? <Text color="textMuted">{org.description}</Text> : null}
+        <RouteButton to={org.location} cityId={org.cityId} address={`${org.name}, ${org.address}`} />
       </View>
 
       {isOwner && org.status !== 'verified' ? (

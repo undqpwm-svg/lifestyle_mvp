@@ -199,6 +199,15 @@ export const ru = {
     interests: 'Темы',
     create: 'Создать',
   },
+  route: {
+    button: 'Маршрут в 2GIS',
+    title: 'Как добраться',
+    pedestrian: 'Пешком',
+    ctx: 'Общественный транспорт',
+    car: 'На машине',
+    taxi: 'На такси',
+    showOnMap: 'Показать на карте 2GIS',
+  },
   org: {
     title: 'Организация',
     pending: 'На проверке',
